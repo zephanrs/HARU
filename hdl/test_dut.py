@@ -419,7 +419,7 @@ def test_load_query_multiple(dut):
     with open("data/query_with_id.txt", "r") as f:
         for i, line in enumerate(f):
             query[0].append(int(line, base=2))
-            if i == 250:
+            if i == 256:
                 break
     query[0].insert(1, 0)
     # print("Ref len: {}".format(len(ref[0])))
