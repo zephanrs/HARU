@@ -28,7 +28,7 @@ module stim_code;
 // Parameters
 parameter MODE = 1; // 0->query; 1->ref
 parameter bitwidth = 16;
-parameter SQG_SIZE = 250;
+parameter SQG_SIZE = 256;
 parameter REF_SIZE = 29898;
 
 // Module IO

@@ -30,7 +30,7 @@ SOFTWARE. */
 #include "haru_test.h"
 
 #define REFERENCE_SIZE 10000
-#define QUERY_SIZE 250
+#define QUERY_SIZE 256
 #define QUERY_LOCATION 500
 
 int main(int argc, char *argv[]) {

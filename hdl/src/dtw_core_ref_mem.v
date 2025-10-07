@@ -52,18 +52,8 @@ module dtw_core_ref_mem #(
 reg [width-1:0] MEM [0:depth-1];
 // reg [depth-1:0] i; // only used for simulation, comment out for synthesis
 /* ===============================
- * initialisation
+ * initialization
  * =============================== */
-//initial begin
-//    if (initalize) begin
-//        $readmemb("data/reference.txt", MEM);
-//    // end else begin
-//    //     // only used for simulation, comment out for synthesis
-//    //     for (i=0; i<depth; i=i+1) begin
-//    //         MEM[i] = 0;
-//    //     end
-//    end
-//end
 
 /* ===============================
  * synchronous logic

@@ -34,7 +34,7 @@ SOFTWARE.
 module dtw_core #(
     parameter WIDTH         = 16,   // Data width
     parameter AXIS_WIDTH    = 32,   // AXI data width
-    parameter SQG_SIZE      = 250,  // Squiggle size
+    parameter SQG_SIZE      = 256,  // Squiggle size
     parameter REF_INIT      = 0,
     parameter REFMEM_PTR_WIDTH = 20
 )(

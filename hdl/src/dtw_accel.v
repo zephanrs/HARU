@@ -100,11 +100,6 @@ module dtw_accel #(
  * local parameters
  * =============================== */
 // Address Map
-// localparam  REG_CONTROL      = 0 << 2;
-// localparam  REG_STATUS       = 1 << 2;
-// localparam  REG_REF_LEN      = 2 << 2;
-// localparam  REG_VERSION      = 3 << 2;
-// localparam  REG_KEY          = 4 << 2;
 localparam  REG_CONTROL      = 0;
 localparam  REG_STATUS       = 1;
 localparam  REG_REF_LEN      = 2;
