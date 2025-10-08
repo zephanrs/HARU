@@ -127,3 +127,18 @@ void haru_process_query(haru_t *haru, int32_t *query, uint32_t size, search_resu
     axi_dma_haru_query_transfer(&haru->axi_dma, size * sizeof(int32_t), sizeof(search_result_t));
     memcpy(results, haru->axi_dma.v_dst_addr, sizeof(search_result_t));
 }
+
+void haru_process_dtw(haru_t *haru, int32_t *ref, int32_t query, uint32_t size, search_result_t *results) {
+    dtw_accel_set_ref_len(&haru->dtw_accel, size);
+    dtw_accel_run(&haru->dtw_accel);
+
+    // dma reference
+    memcpy((void *)haru->axi_dma.v_src_addr, ref, size * sizeof(int32_t));
+    axi_dma_mm2s_transfer(&haru->axi_dma, size * sizeof(int32_t));
+
+    // dma query
+    memcpy((void *)haru->axi_dma.v_src_addr, query, size * sizeof(int32_t));
+    axi_dma_haru_query_transfer(&haru->axi_dma, size * sizeof(int32_t), sizeof(search_result_t));
+
+    memcpy(results, haru->axi_dma.v_dst_addr, sizeof(search_result_t));
+}

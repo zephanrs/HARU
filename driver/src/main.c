@@ -29,9 +29,8 @@ SOFTWARE. */
 #include "haru.h"
 #include "haru_test.h"
 
-#define REFERENCE_SIZE 10000
+#define REFERENCE_SIZE 256
 #define QUERY_SIZE 256
-#define QUERY_LOCATION 500
 
 int main(int argc, char *argv[]) {
     int32_t ret;
@@ -54,18 +53,14 @@ int main(int argc, char *argv[]) {
         ref[i] = rand() % 100;
     }
 
-    for (int i = 2; i < QUERY_SIZE + 2; i++) {
-        query[i] = ref[QUERY_LOCATION + i];
+    for (int i = 0; i < QUERY_SIZE; i++) {
+        query[i+2] = ref[i] + 1;
     }
 
-    printf("load reference\n");
-    if (haru_load_reference(&haru, ref, REFERENCE_SIZE)) {
-        printf("Load done: %x\n", dtw_accel_ref_load_done(&haru.dtw_accel));
-        haru_process_query(&haru, query, QUERY_SIZE+2, &results);
-        printf("results:\n\tqid:%d\n\tposition: %d\n\tscore: %d\n", results.qid, results.position, results.score);
-    } else {
-        printf("Load not done\n");
-    }
+    haru_process_dtw(&haru, ref, query, 256, &results);
+
+    printf("results:\n\tqid:%d\n\tposition:%d\n\tscore:%d\n",
+           results.qid, results.position, results.score);
 
     haru_release(&haru);
     return 0;

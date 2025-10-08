@@ -63,4 +63,6 @@ void haru_get_load_done(haru_t *haru);
 int32_t haru_load_reference(haru_t *haru, int32_t *ref, uint32_t size);
 void haru_process_query(haru_t *haru, int32_t *query, uint32_t size, search_result_t *results);
 
+void haru_process_dtw(haru_t *haru, int32_t *ref, int32_t *query, uint32_t size, search_result_t *results);
+
 #endif // HARU_H
