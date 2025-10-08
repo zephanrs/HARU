@@ -133,11 +133,14 @@ void haru_process_dtw(haru_t *haru, int32_t *ref, int32_t *query, uint32_t size,
     dtw_accel_run(&haru->dtw_accel);
 
     // dma reference
+    memset((void *) haru->axi_dma.v_src_addr, 0, 0xffff);
     memcpy((void *)haru->axi_dma.v_src_addr, ref, size * sizeof(int32_t));
     axi_dma_mm2s_transfer(&haru->axi_dma, size * sizeof(int32_t));
 
     // dma query
+    memset((void *)haru->axi_dma.v_src_addr, 0, 0xffff);
     memcpy((void *)haru->axi_dma.v_src_addr, query, size * sizeof(int32_t));
+    memset(haru->axi_dma.v_dst_addr, 0, 0xffff);
     axi_dma_haru_query_transfer(&haru->axi_dma, size * sizeof(int32_t), sizeof(search_result_t));
 
     memcpy(results, haru->axi_dma.v_dst_addr, sizeof(search_result_t));
