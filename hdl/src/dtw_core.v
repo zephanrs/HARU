@@ -73,9 +73,6 @@ module dtw_core #(
  * local parameters
  * =============================== */
 // Operation mode
-localparam
-    MODE_NORMAL = 1'b0,
-    MODE_LOAD_REF = 1'b1;
 
 // FSM states
 localparam [2:0] // n states
@@ -169,13 +166,8 @@ always @(posedge clk) begin
         case (r_state)
         IDLE: begin
             if (rs) begin
-                if (op_mode == MODE_NORMAL && r_load_done == 1) begin
-                    r_state <= DTW_Q_INIT;
-                end else if (op_mode == MODE_LOAD_REF && r_load_done == 0) begin
-                    r_state <= REF_LOAD;
-                end else begin
-                    r_state <= IDLE;
-                end
+                // load reference
+                r_state <= REF_LOAD;
             end else begin
                 r_state <= IDLE;
             end
@@ -185,7 +177,7 @@ always @(posedge clk) begin
                 r_state <= REF_LOAD;
             end else begin
                 r_load_done <= 1;
-                r_state <= IDLE;
+                r_state <= DTW_Q_INIT; // load query next
             end
         end
         DTW_Q_INIT: begin
@@ -206,6 +198,7 @@ always @(posedge clk) begin
             if (sink_fifo_full || stall_counter < 2'h3) begin
                 r_state <= DTW_Q_DONE;
             end else begin
+                r_load_done <= 0;
                 r_state <= IDLE;
             end
         end
@@ -220,7 +213,7 @@ always @(posedge clk) begin
         busy                <= 0;
         src_fifo_rden       <= 0;
         sink_fifo_wren      <= 0;
-        addr_ref           <= 0;
+        addr_ref            <= 0;
         dp_rst              <= 1;
         dp_running          <= 0;
         stall_counter       <= 0;
