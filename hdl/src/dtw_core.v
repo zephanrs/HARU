@@ -248,6 +248,8 @@ always @(posedge clk) begin
         r_src_fifo_clear    <= 0;
         wren_ref            <= 0;
 
+        addr_ref <= 0;
+
         if (!src_fifo_empty) begin
             curr_qid        <= src_fifo_data;
             dp_running      <= 1;
@@ -266,7 +268,7 @@ always @(posedge clk) begin
         if (addr_ref < SQG_SIZE) begin
             // Query loading
             if (!src_fifo_empty) begin
-                addr_ref       <= addr_ref + 1;
+                addr_ref        <= addr_ref + 1;
                 src_fifo_rden   <= 1;
                 dp_running      <= 1;
             end else begin
@@ -275,7 +277,7 @@ always @(posedge clk) begin
             end
         end else begin
             // Query loaded
-            addr_ref           <= addr_ref + 1;
+            addr_ref            <= addr_ref + 1;
             src_fifo_rden       <= 0;
             dp_running          <= 1;
         end
