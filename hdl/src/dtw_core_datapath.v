@@ -55,6 +55,7 @@ reg     [7:0]           squiggle_buffaddress;
 reg     [width-1:0]     Squiggle_Buffer [1:SQG_SIZE];
 reg     [width-1:0]     Rword_buff;
 
+wire    [width-1:0]     DTW_NW;
 wire    [width-1:0]     DTW_curr    [1:SQG_SIZE];
 wire    [width-1:0]     p_Rword     [1:SQG_SIZE];
 
@@ -69,6 +70,10 @@ reg     [width-1:0]     DTW_lastrow;
 /* ===============================
  * submodules
  * =============================== */
+
+// set NW to 0 only on first iteration (when first PE running but not second)
+assign DTW_NW = (running_d[1] & ~running_d[2]) ? 0 : -1;
+
 // First PE
 dtw_core_pe #(
     .width(width)
@@ -79,8 +84,8 @@ dtw_core_pe #(
     .x    (Squiggle_Buffer[001]),
     .y    (Rword_buff),
     .W    (DTW_prev[001]),
-    .N    (16'd0),
-    .NW   (16'd0),
+    .N    (-1), // set to -1 for DTW
+    .NW   (DTW_NW),
     .DTWc (DTW_curr[001]),
     .yp   (p_Rword[001])
 );
@@ -200,21 +205,16 @@ end
 always @(posedge clk) begin
     if (rst) begin
         DTW_lastrow <= -1;
+        Minval <= -1;
+        Minpos <= 0;
     end else if (running) begin
         if(running_d[SQG_SIZE]) begin
             DTW_lastrow <= DTW_curr[SQG_SIZE];
+            if (cycle_counter == ref_len) begin
+                Minval <= DTW_curr[SQG_SIZE];
+                Minpos <= ref_len; // latch on final cycle
+            end
         end
-    end
-end
-
-// Min value and position update
-always @(posedge clk) begin
-    if (rst) begin
-        Minval <= -1;
-        Minpos <= 0;
-    end else if (DTW_lastrow < Minval) begin
-        Minval <= DTW_lastrow;
-        Minpos <= cycle_counter;
     end
 end
 
