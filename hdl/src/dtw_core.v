@@ -93,7 +93,7 @@ reg r_src_fifo_clear;
 
 // Ref mem signals
 reg  [REFMEM_PTR_WIDTH-1:0] addr_ref;          // Read address for refmem 
-reg                 wren_ref;           // Write enable for refmem
+logic               wren_ref;           // Write enable for refmem
 wire [WIDTH-1:0]    dataout_ref;        // Reference data
 
 // DTW datapath signals
@@ -216,6 +216,8 @@ always @(posedge clk) begin
     end
 end
 
+assign wren_ref = (r_state == REF_LOAD) && !src_fifo_empty && src_fifo_rden;
+
 // FSM output
 always @(posedge clk) begin
     case (r_state)
@@ -223,11 +225,10 @@ always @(posedge clk) begin
         busy                <= 0;
         src_fifo_rden       <= 0;
         sink_fifo_wren      <= 0;
-        addr_ref           <= 0;
+        addr_ref            <= 0;
         dp_rst              <= 1;
         dp_running          <= 0;
         stall_counter       <= 0;
-        wren_ref            <= 0;
         r_src_fifo_clear    <= 1;
         sink_fifo_last      <= 0;
         curr_qid            <= 0;
@@ -244,9 +245,6 @@ always @(posedge clk) begin
 
         if (!src_fifo_empty && src_fifo_rden) begin
             addr_ref        <= addr_ref + 1;
-            wren_ref        <= 1;
-        end else begin
-            wren_ref        <= 0;
         end
     end
     DTW_Q_INIT: begin
@@ -256,7 +254,6 @@ always @(posedge clk) begin
         dp_rst              <= 0;
         stall_counter       <= 0;
         r_src_fifo_clear    <= 0;
-        wren_ref            <= 0;
 
         if (!src_fifo_empty) begin
             curr_qid        <= src_fifo_data;
@@ -271,7 +268,6 @@ always @(posedge clk) begin
         dp_rst                  <= 0;
         stall_counter           <= 0;
         r_src_fifo_clear        <= 0;
-        wren_ref            <= 0;
 
         if (addr_ref < SQG_SIZE) begin
             // Query loading
@@ -295,7 +291,6 @@ always @(posedge clk) begin
         src_fifo_rden   <= 0;
         dp_rst          <= 0;
         dp_running      <= 0;
-        wren_ref        <= 0;
 
         // Serialize output
         if (!sink_fifo_full) begin
@@ -329,7 +324,6 @@ always @(posedge clk) begin
         dp_rst              <= 1;
         dp_running          <= 0;
         stall_counter       <= 0;
-        wren_ref            <= 0;
         r_src_fifo_clear    <= 1;
         sink_fifo_last      <= 0;
     end

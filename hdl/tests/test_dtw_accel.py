@@ -334,9 +334,8 @@ def test_load_ref(dut):
     # -------------------------------------------------------------------------
     # Test Validation
     # -------------------------------------------------------------------------
-    # Verify reference memory contents (skip index 0 due to known issue)
-    for i in range(1, 200):
-        # Known issue: the first cell (index=0) of ref mem is always zero
+    # Verify reference memory contents
+    for i in range(0, 200):
         actual_value = dut.dut.dc.inst_dtw_core_ref_mem.MEM[i].value.integer
         expected_value = reference_data[0][i]
         assert actual_value == expected_value, \

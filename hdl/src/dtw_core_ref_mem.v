@@ -51,6 +51,7 @@ module dtw_core_ref_mem #(
 (* ram_style = "block" *) 
 reg [width-1:0] MEM [0:depth-1];
 // reg [depth-1:0] i; // only used for simulation, comment out for synthesis
+
 /* ===============================
  * initialization
  * =============================== */

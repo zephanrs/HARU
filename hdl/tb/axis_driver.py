@@ -71,8 +71,20 @@ class AXISSource:
 
     async def send_raw_data(self, data_list):
         for data in data_list:
-            d = AxiStreamFrame(data, tid = self.cur_id, tdest = self.cur_id)
-            await self.source.send(d)
+            if isinstance(data, AxiStreamFrame):
+                frame = data
+            elif isinstance(data, (bytes, bytearray)):
+                frame = AxiStreamFrame(data, tid=self.cur_id, tdest=self.cur_id)
+            else:
+                # Pack each sample into a full bus-width word so lower 16 bits map correctly
+                word_bytes = getattr(self.source, "byte_lanes", 4)
+                mask = (1 << (word_bytes * 8)) - 1
+                frame_bytes = bytearray()
+                for value in data:
+                    frame_bytes += int(value & mask).to_bytes(word_bytes, byteorder="little", signed=False)
+                frame = AxiStreamFrame(frame_bytes, tid=self.cur_id, tdest=self.cur_id)
+
+            await self.source.send(frame)
             self.cur_id += 1
 
     async def send_frame_data(self, frame):
@@ -149,4 +161,3 @@ class AXISMonitor:
         self.rst <= 0
         await RisingEdge(self.clk)
         await RisingEdge(self.clk)
-
