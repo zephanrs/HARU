@@ -48,6 +48,28 @@ cd build
 pytest ../test_runner.py -v -s --tb=short
 ```
 
+### Running Individual Tests
+
+To run a specific test case, use pytest's `-k` flag to filter by test name:
+
+```bash
+# From hdl directory
+cd build
+pytest ../test_runner.py -k test_read_version -v -s
+
+# Run multiple specific tests
+pytest ../test_runner.py -k "test_read_version or test_write_control" -v -s
+```
+
+Available test cases can be found in `tests/test_dtw_accel.py`:
+- `test_read_version` - Verify version register read via AXI-Lite
+- `test_write_control` - Test control register write
+- `test_read_control` - Test control register read
+- `test_read_ref_len` - Test reference length register read
+- `test_write_ref_len` - Test reference length register write
+- `test_axis_pass_through` - Verify AXI Stream passthrough mode
+- `test_dtw_accel` - Full DTW acceleration test
+
 Benefits:
 - Better test discovery and reporting
 - Parallel test execution support
