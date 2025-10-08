@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
     }
 
     int32_t ref[REFERENCE_SIZE];
-    int32_t query[QUERY_SIZE + 2];
+    int32_t query[QUERY_SIZE + 1];
     search_result_t results;
 
     memset(ref, 0, sizeof(ref));
@@ -53,8 +53,9 @@ int main(int argc, char *argv[]) {
         ref[i] = rand() % 100;
     }
 
+    query[0] = 0;
     for (int i = 0; i < QUERY_SIZE; i++) {
-        query[i+2] = ref[i] + 1;
+        query[i+1] = ref[i];
     }
 
     haru_process_dtw(&haru, ref, query, 256, &results);
