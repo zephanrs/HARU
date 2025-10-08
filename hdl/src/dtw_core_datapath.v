@@ -72,7 +72,7 @@ reg     [width-1:0]     DTW_lastrow;
  * =============================== */
 
 // set NW to 0 only on first iteration (when first PE running but not second)
-assign DTW_NW = (running_d[1] & ~running_d[2]) ? '0 : -1;
+assign DTW_NW = (running_d[0] & ~running_d[1]) ? 0 : -1;
 
 // First PE
 dtw_core_pe #(
