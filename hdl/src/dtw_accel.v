@@ -192,8 +192,8 @@ wire  [31:0]                    w_dtw_core_curr_qid;
  * initialization
  * =============================== */
 initial begin
-    r_control <= 0;
-    r_ref_len <= 4000;
+    r_control = 0;
+    r_ref_len = 4000;
 end
 
 /* ===============================
@@ -456,7 +456,7 @@ always @ (posedge S_AXI_clk) begin
                 r_reg_out_data <= w_dtw_core_cycle_counter;
             end
             REG_CORE_REF_ADDR: begin
-                r_reg_out_data <= {12'h0, w_dtw_core_addr_ref};
+                r_reg_out_data <= {14'h0, w_dtw_core_addr_ref};
             end
             REG_NQUERY: begin
                 r_reg_out_data <= w_dtw_core_nquery;

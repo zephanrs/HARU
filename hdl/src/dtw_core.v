@@ -181,7 +181,7 @@ always @(posedge clk) begin
             end
         end
         REF_LOAD: begin
-            if (addr_ref < ref_len) begin
+            if (addr_ref < REFMEM_PTR_WIDTH'(ref_len)) begin
                 r_state <= REF_LOAD;
             end else begin
                 r_load_done <= 1;
@@ -208,6 +208,9 @@ always @(posedge clk) begin
             end else begin
                 r_state <= IDLE;
             end
+        end
+        default: begin
+            r_state <= IDLE;
         end
         endcase
     end
@@ -316,7 +319,19 @@ always @(posedge clk) begin
                 sink_fifo_data  <= 0;
                 r_dbg_nquery    <= r_dbg_nquery + 1;
             end
-        end 
+        end
+    end
+    default: begin
+        busy                <= 0;
+        src_fifo_rden       <= 0;
+        sink_fifo_wren      <= 0;
+        addr_ref            <= 0;
+        dp_rst              <= 1;
+        dp_running          <= 0;
+        stall_counter       <= 0;
+        wren_ref            <= 0;
+        r_src_fifo_clear    <= 1;
+        sink_fifo_last      <= 0;
     end
     endcase
 end

@@ -24,9 +24,22 @@
 # SOFTWARE.
 
 
+# Pytest runner mode (recommended)
+.PHONY: pytest
+pytest:
+	@mkdir -p build
+	@cd build && pytest ../test_runner.py -v -s --tb=short
+
 # defaults
-SIM ?= icarus
+SIM ?= verilator
 TOPLEVEL_LANG ?= verilog
+SIM_BUILD ?= build/sim_build
+
+# Traditional cocotb mode (legacy)
+.PHONY: cocotb
+cocotb:
+	@mkdir -p build
+	@$(MAKE) sim SIM_BUILD=build/sim_build COCOTB_RESULTS_FILE=build/results.xml
 
 ifneq ($(TOPLEVEL_LANG),verilog)
 all:
@@ -36,6 +49,10 @@ clean::
 else
 
 ifeq ($(SIM),icarus)
+COMPILE_ARGS+=-I$(PWD)/src/
+else ifeq ($(SIM),verilator)
+COMPILE_ARGS+=-Wno-fatal
+COMPILE_ARGS+=--trace --trace-structs
 COMPILE_ARGS+=-I$(PWD)/src/
 else
 COMPILE_ARGS+=+incdir+$(PWD)/src/
@@ -58,10 +75,12 @@ VERILOG_SOURCES += $(PWD)/src/sim/tb_dtw_accel.v
 TOPLEVEL = tb_dtw_accel
 GPI_IMPL := vpi
 
-MODULE = test_dut
+MODULE = tests.test_dtw_accel
 
 include $(shell cocotb-config --makefiles)/Makefile.sim
 
-# TODO: Add waveform generation
-
 endif
+
+# Clean up all build artifacts
+clean::
+	rm -rf .pytest_cache __pycache__ tests/__pycache__ tb/__pycache__ build

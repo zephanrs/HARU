@@ -30,7 +30,6 @@ import cocotb
 from array import array as Array
 
 from cocotb.clock import Clock
-from cocotb.result import TestFailure
 from cocotb.triggers import Timer
 from cocotb.triggers import RisingEdge
 from cocotb.triggers import FallingEdge

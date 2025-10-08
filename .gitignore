@@ -1,3 +1,6 @@
+# User specific ignores
+RM_THIS_DIR/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -143,3 +146,10 @@ RUgOUT
 *.zip
 output/
 test_ru_out/
+
+# HDL simulation artifacts
+hdl/sim_build/
+hdl/build/
+*.vcd
+*.fst
+results.xml

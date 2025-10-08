@@ -77,12 +77,12 @@ module tb_dtw_accel #(
     input       [AXIS_DATA_WIDTH - 1:0] axis_in_tdata,
 
     `ifdef AXIS_OUT_TUSER_EN
-    input                               axis_out_tuser,
+    output                              axis_out_tuser,
     `endif
-    input                               axis_out_tvalid,
-    output                              axis_out_tready,
-    input                               axis_out_tlast,
-    input       [AXIS_DATA_WIDTH - 1:0] axis_out_tdata
+    output                              axis_out_tvalid,
+    input                               axis_out_tready,
+    output                              axis_out_tlast,
+    output      [AXIS_DATA_WIDTH - 1:0] axis_out_tdata
 );
 
 /* ===============================

@@ -76,7 +76,7 @@ assign o_fifo_r_data    = MEM[read_ptr];
 initial begin
     write_ptr   = 0;
     read_ptr    = 0;
-    r_read_ptr  = (DEPTH - 1);
+    r_read_ptr  = $clog2(DEPTH)'(DEPTH - 1);
 
     if ( WIDTH <= 0 ) begin
         $error("%m ** Illegal condition **, you used %d WIDTH", WIDTH);
@@ -104,7 +104,7 @@ always @ ( posedge clk ) begin
     if (rst) begin
         write_ptr       <=  0;
         read_ptr        <=  0;
-        r_read_ptr      <=  (DEPTH - 1);
+        r_read_ptr      <=  $clog2(DEPTH)'(DEPTH - 1);
     end else begin
         // Write pointer
         if (i_fifo_w_stb && o_fifo_not_full) begin

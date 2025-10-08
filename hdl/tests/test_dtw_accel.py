@@ -29,7 +29,6 @@ import sys
 import random
 import cocotb
 import logging
-from cocotb.result import TestFailure
 from cocotb.clock import Clock
 import time
 from array import array as Array
