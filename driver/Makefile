@@ -53,7 +53,7 @@ endif
 $(BINARY): $(OBJ)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(LIBS)
 
-$(BUILD_DIR)/main.o: src/main.c src/haru.h src/haru_test.h
+$(BUILD_DIR)/main.o: src/main.c src/haru.c src/haru_test.c
 	$(CXX) $(CFLAGS) $(CPPFLAGS) $(LANGFLAG) $< -c -o $@
 
 # $(BUILD_DIR)/haru_test.o: src/haru_test.c src/haru_test.h src/haru.h

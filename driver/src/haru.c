@@ -128,7 +128,7 @@ void haru_process_query(haru_t *haru, int32_t *query, uint32_t size, search_resu
     memcpy(results, haru->axi_dma.v_dst_addr, sizeof(search_result_t));
 }
 
-void haru_process_dtw(haru_t *haru, int32_t *ref, int32_t query, uint32_t size, search_result_t *results) {
+void haru_process_dtw(haru_t *haru, int32_t *ref, int32_t *query, uint32_t size, search_result_t *results) {
     dtw_accel_set_ref_len(&haru->dtw_accel, size);
     dtw_accel_run(&haru->dtw_accel);
 
