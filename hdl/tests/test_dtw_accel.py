@@ -351,13 +351,6 @@ def test_load_ref(dut):
 ###############################################################################
 @cocotb.test(skip = True)
 def test_load_query(dut):
-    """
-    Test DTW query processing with data loaded from external files.
-
-    Loads reference and query data from text files, processes the query
-    through the DTW accelerator, and verifies the expected match results.
-    (Skipped - requires external data files)
-    """
     # -------------------------------------------------------------------------
     # Test Setup
     # -------------------------------------------------------------------------
@@ -386,21 +379,14 @@ def test_load_query(dut):
     assert control_reg == (1 << 2), "Control register opmode bits incorrect"
 
     # Load reference and query data from files
-    reference_data = [[]]
+    reference_data = [[i + 20 for i in range(256)]]
+
+    # Create query data with proper format: ID, padding, then actual query values
     query_data = [[]]
-
-    with open("data/reference.txt", "r") as f:
-        for line in f:
-            reference_data[0].append(int(line, base=2))
-
-    with open("data/query_with_id.txt", "r") as f:
-        for i, line in enumerate(f):
-            query_data[0].append(int(line, base=2))
-            if i == 256:
-                break
-
-    # Insert padding after query ID
-    query_data[0].insert(1, 0)
+    query_data[0].append(3)  # Query ID
+    query_data[0].append(0)  # Padding
+    for i in range(256):
+        query_data[0].append(i + 20)  # Actual query data values
 
     # Set reference length
     ref_length = len(reference_data[0])
@@ -431,17 +417,30 @@ def test_load_query(dut):
     assert dut.dut.w_src_fifo_empty == 1, "Source FIFO should be empty"
 
     # Start receiving output and send query data
-    cocotb.fork(axis_sink.receive())
+    dut._log.info("Starting axis_sink.receive() before sending query data")
+
+    # Fork receive task and send query data
+    recv_coro = cocotb.fork(axis_sink.receive())
     yield axis_source.send_raw_data(query_data)
 
-    # Wait for DTW computation to complete
-    yield Timer(CLK_PERIOD * (261 + ref_length))
+    # Wait for DTW computation and data output to complete
+    yield Timer(CLK_PERIOD * (266 + ref_length))
+
+    # Wait for the receive coroutine to complete (with timeout)
+    yield recv_coro.join()
 
     # -------------------------------------------------------------------------
     # Test Validation
     # -------------------------------------------------------------------------
     # Read and verify DTW results
+    dut._log.info(f"axis_out_tvalid: {dut.axis_out_tvalid.value}")
+    dut._log.info(f"axis_out_tready: {dut.axis_out_tready.value}")
+    dut._log.info(f"Received frames count: {len(axis_sink.recv_frames)}")
+    dut._log.info(f"Sink FIFO empty: {dut.dut.w_sink_fifo_empty.value}")
+    dut._log.info(f"Sink FIFO full: {dut.dut.w_sink_fifo_full.value}")
+
     result_data = axis_sink.read_data()
+    dut._log.info(f"Result data: {result_data}")
 
     assert len(result_data) == 1, "Should have one result packet"
     assert len(result_data[0]) == 3, "Result should contain [query_id, position, distance]"
