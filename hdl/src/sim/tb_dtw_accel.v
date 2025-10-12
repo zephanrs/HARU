@@ -103,8 +103,8 @@ dtw_accel #(
     .ADDR_WIDTH       (ADDR_WIDTH),
     .DATA_WIDTH       (DATA_WIDTH),
     .AXIS_DATA_WIDTH  (AXIS_DATA_WIDTH),
-    .INVERT_AXI_RESET (0),
-    .INVERT_AXIS_RESET(0)
+    .INVERT_AXI_RESET (1),
+    .INVERT_AXIS_RESET(1)
 ) dut (
     .S_AXI_clk        (clk),
     .S_AXI_rst        (r_rst),

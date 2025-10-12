@@ -1,75 +1,102 @@
-import pathlib
+# test_sim.py
+import os
+import sys
 import re
 import pytest
-from cocotb_test.simulator import run
+import importlib
+from pathlib import Path
 
-# …/haru/hdl
-REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
-HDL       = REPO_ROOT / "src"
-TEST_DIR  = REPO_ROOT / "test"
-SIM_BUILD = str(REPO_ROOT / "build")
+import cocotb
+from cocotb.runner import get_runner
 
-# Find all cocotb test files: dtw_*.py
-TEST_FILES = sorted(TEST_DIR.glob("dtw_*.py"))
+top_module        = "tb_dtw_accel"
+test_glob_pattern = "dtw_*.py"
 
-# Regex: @cocotb.test(...) then (async )?def test_name(
-TEST_PATTERN = re.compile(
-  r"@cocotb\.test(?:\s*\([^)]*\))?\s*?\n\s*(?:async\s+)?def\s+(test_[A-Za-z0-9_]+)\s*\(",
-  re.MULTILINE,
-)
+proj_path = Path(__file__).resolve().parents[1]
+src_path  = proj_path / "src"
+test_path = proj_path / "test"
+build_dir = proj_path / "build"
 
-def discover_pairs():
-  pairs, ids = [], []
-  for f in TEST_FILES:
-    text = f.read_text()
-    names = TEST_PATTERN.findall(text)
-    if not names:
-      pairs.append((f.stem, None))
-      ids.append(f"{f.stem}::(no_tests_found)")
-    else:
-      for t in names:
-        pairs.append((f.stem, t))
-        ids.append(f"{f.stem}::{t}")
-  return pairs, ids
-
-PARAMS, IDS = discover_pairs()
-
-# RTL sources
-VERILOG_SOURCES = [
-  str(HDL / "axi_defines.v"),
-  str(HDL / "axi_lite_slave.v"),
-  str(HDL / "fifo.v"),
-  str(HDL / "axis_2_fifo.v"),
-  str(HDL / "fifo_2_axis.v"),
-  str(HDL / "dtw_core_pe.v"),
-  str(HDL / "dtw_core_ref_mem.v"),
-  str(HDL / "dtw_core_datapath.v"),
-  str(HDL / "dtw_core.v"),
-  str(HDL / "dtw_accel.v"),
-  str(HDL / "sim" / "tb_dtw_accel.v"),
+sources = [
+  src_path / "axi_defines.v",
+  src_path / "axi_lite_slave.v",
+  src_path / "fifo.v",
+  src_path / "axis_2_fifo.v",
+  src_path / "fifo_2_axis.v",
+  src_path / "dtw_core_pe.v",
+  src_path / "dtw_core_ref_mem.v",
+  src_path / "dtw_core_datapath.v",
+  src_path / "dtw_core.v",
+  src_path / "dtw_accel.v",
+  src_path / "sim" / "tb_dtw_accel.v",
 ]
 
-@pytest.mark.parametrize("top", ["tb_dtw_accel"])
-@pytest.mark.parametrize(("cocotb_module", "testcase"), PARAMS, ids=IDS)
-def test_build_and_run(top, cocotb_module, testcase, request):
-  waves = request.config.getoption("--waves", default=False)
+# same helper as your reference style
+def get_tests(module):
+  return [
+    func.__name__ for func in vars(module).values()
+    if isinstance(func, cocotb.regression.Test)
+  ]
 
-  compile_args = ["-g2012", f"-I{HDL}"]
-  sim_args = ["+trace"] if waves else []
+# ensure tests can be imported directly
+if str(test_path) not in sys.path:
+  sys.path.insert(0, str(test_path))
 
-  run(
-    simulator="icarus",
-    verilog_sources=VERILOG_SOURCES,
-    toplevel=top,
-    module=cocotb_module,
-    testcase=testcase,
-    toplevel_lang="verilog",
-    compile_args=compile_args,
-    sim_args=sim_args,
-    sim_build=SIM_BUILD,
-    python_search=[str(TEST_DIR)],
-    extra_env={
-      "PYTHONPATH": str(TEST_DIR),
-      "COCOTB_RESOLVE_X": "RANDOM",
-    },
+# discover modules and their cocotb tests
+tests = []
+test_modules = []
+for p in sorted(test_path.glob(test_glob_pattern)):
+  modname = p.stem
+  if modname not in sys.modules:
+    importlib.import_module(modname)
+  test_modules.append(modname)
+  tests += get_tests(sys.modules[modname])
+
+def setup_runner():
+  sim = os.getenv("SIM", "icarus")
+  runner = get_runner(sim)
+
+  build_args = []
+  if sim.lower() == "icarus":
+    build_args = ["-g2012", f"-I{src_path}"]
+
+  runner.build(
+    sources=[str(s) for s in sources],
+    hdl_toplevel=top_module,
+    build_args=build_args,
+    waves=True,     # wave dumping can still be toggled per-test below
+    verbose=True,
+    always=True,
   )
+  return runner
+
+runner = setup_runner()
+
+@pytest.mark.parametrize("test_case", tests or ["(no_tests_found)"])
+def test_runner(test_case, request):
+  # honor --waves and --tc from conftest.py
+  waves = request.config.getoption("--waves")
+  tc    = request.config.getoption("--tc")
+
+  if test_case == "(no_tests_found)":
+    pytest.skip("no cocotb tests found")
+
+  if tc and test_case != tc:
+    pytest.skip(f"--tc specified: skipping {test_case}")
+
+  # set env here (runner.test in this version has no 'env=' kwarg)
+  os.environ["PYTHONPATH"] = str(test_path)
+  os.environ.setdefault("COCOTB_RESOLVE_X", "RANDOM")
+
+  runner.test(
+    hdl_toplevel=top_module,
+    test_module=",".join(test_modules),
+    testcase=test_case,
+    test_dir=str(build_dir),
+    waves=waves,
+    verbose=True,
+  )
+
+if __name__ == "__main__":
+  print("running tests…")
+  pytest.main([__file__, "-v", "-s"])
