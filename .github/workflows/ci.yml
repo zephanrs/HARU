@@ -1,0 +1,42 @@
+name: Simulation Tests
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  run_tests:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install libpython
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libpython3.11
+
+      - name: Install iverilog
+        run: |
+          tar -C "$HOME" -xzf "$GITHUB_WORKSPACE/.ci/prebuilt/github-actions-iverilog-12.0.tar.gz"
+          echo "$HOME/iverilog/bin" >> "$GITHUB_PATH"
+
+      - name: Check iverilog
+        run: |
+          which iverilog
+          iverilog -V
+
+      - name: Install Python packages
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest cocotb cocotbext-axi
+
+      - name: Run pytest (cocotb simulations)
+        timeout-minutes: 10
+        run: |
+          python -m pytest -c hdl/pytest.ini hdl
