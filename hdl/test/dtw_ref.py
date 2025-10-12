@@ -5,7 +5,7 @@ from cocotbext.axi import (
   AxiLiteBus, AxiLiteMaster,
   AxiStreamBus, AxiStreamSource, AxiStreamFrame,
 )
-from test_helpers import start_dut, reset_dut, reset_core, reset_axis
+from test_helpers import start_dut, reset_dut, reset_core, reset_axis, wait_ref
 
 CLK_NS = 10
 REG_CONTROL = 0x00
@@ -15,7 +15,7 @@ REG_VERSION = 0x0C
 REG_KEY     = 0x10
 CR_RESET = 0
 CR_RS    = 1
-CR_MODE  = 2  # LOAD_REF
+CR_MODE  = 2
 
 @cocotb.test()
 async def test_set_ref_len(dut):
@@ -58,8 +58,7 @@ async def test_load_reference(dut):
   )
   await axis.send(AxiStreamFrame(payload))
 
-  # give enough real time (was 250 * CLK_PERIOD=2; now scale it)
-  await Timer(1250 * CLK_NS, units="ns")
+  await wait_ref(axil, dut)
 
   mem = dut.dut.dc.inst_dtw_core_ref_mem.MEM
   for i in range(ref_length):

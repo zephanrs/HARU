@@ -48,3 +48,12 @@ async def reset_axis(dut):
   dut.axis_rst.value = 1
   for _ in range(2):
     await RisingEdge(dut.axis_clk)
+
+async def wait_ref(axil, dut):
+  for _ in range(50000):
+    rd = await axil.read(0x04, 4)
+    s = int.from_bytes(rd.data, "little")
+    if ((s >> 1) & 1) and ((s >> 6) & 7) == 0:
+      return
+    await RisingEdge(dut.clk)
+  raise AssertionError("timeout waiting for ref load complete")
