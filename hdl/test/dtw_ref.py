@@ -5,17 +5,7 @@ from cocotbext.axi import (
   AxiLiteBus, AxiLiteMaster,
   AxiStreamBus, AxiStreamSource, AxiStreamFrame,
 )
-from test_helpers import start_dut, reset_dut, reset_core, reset_axis, wait_ref
-
-CLK_NS = 10
-REG_CONTROL = 0x00
-REG_STATUS  = 0x04
-REG_REF_LEN = 0x08
-REG_VERSION = 0x0C
-REG_KEY     = 0x10
-CR_RESET = 0
-CR_RS    = 1
-CR_MODE  = 2
+from test_helpers import *
 
 @cocotb.test()
 async def test_set_ref_len(dut):
@@ -25,8 +15,7 @@ async def test_set_ref_len(dut):
   val = 64
   await axil.write(REG_REF_LEN, val.to_bytes(4, "little"))
   rd = await axil.read(REG_REF_LEN, 4)
-  got = int.from_bytes(rd.data, "little")
-  assert got == val
+  assert int.from_bytes(rd.data, "little") == val
 
 @cocotb.test()
 async def test_load_reference(dut):
@@ -35,13 +24,13 @@ async def test_load_reference(dut):
   axis = AxiStreamSource(AxiStreamBus.from_prefix(dut, "axis_in"), dut.axis_clk, reset=None)
   await reset_dut(dut)
 
-  await reset_core(axil, REG_CONTROL, CR_RESET)
+  await reset_core(axil)
   await reset_axis(dut)
   await Timer(CLK_NS * 10, units="ns")
 
   rd = await axil.read(REG_CONTROL, 4)
   ctrl = int.from_bytes(rd.data, "little")
-  ctrl |= (1 << CR_MODE)
+  ctrl |= (1 << CR_MODE)     # LOAD_REF
   ctrl &= ~(1 << CR_RS)
   await axil.write(REG_CONTROL, ctrl.to_bytes(4, "little"))
 

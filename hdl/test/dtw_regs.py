@@ -2,13 +2,7 @@
 import cocotb
 from cocotb.triggers import RisingEdge
 from cocotbext.axi import AxiLiteBus, AxiLiteMaster
-from test_helpers import start_dut, reset_dut
-
-REG_CONTROL = 0x00
-REG_STATUS  = 0x04
-REG_REF_LEN = 0x08
-REG_VERSION = 0x0C
-REG_KEY     = 0x10
+from test_helpers import *
 
 @cocotb.test()
 async def test_read_version(dut):
@@ -36,14 +30,17 @@ async def test_write_read_control(dut):
   for val in patterns:
     await axil.write(REG_CONTROL, val.to_bytes(4, "little"))
     await RisingEdge(dut.clk)
+
     rd = await axil.read(REG_CONTROL, 4)
     rb = int.from_bytes(rd.data, "little")
     assert rb == val
+
     rc  = dut.dut.r_control.value.integer
     rst = dut.dut.w_dtw_core_rst.value.integer
     rs  = dut.dut.w_dtw_core_rs.value.integer
     md  = dut.dut.w_dtw_core_mode.value.integer
+
     assert rc == val
-    assert rst == ((val >> 0) & 1)
-    assert rs  == ((val >> 1) & 1)
-    assert md  == ((val >> 2) & 1)
+    assert rst == ((val >> CR_RESET) & 1)
+    assert rs  == ((val >> CR_RS)    & 1)
+    assert md  == ((val >> CR_MODE)  & 1)
