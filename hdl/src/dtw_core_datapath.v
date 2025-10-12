@@ -55,11 +55,11 @@ reg     [7:0]           squiggle_buffaddress;
 reg     [width-1:0]     Squiggle_Buffer [0:SQG_SIZE-1];
 reg     [width-1:0]     Rword_buff;
 
-wire    [width-1:0]     DTW_curr    [1:SQG_SIZE];
-wire    [width-1:0]     p_Rword     [1:SQG_SIZE];
+wire    [width-1:0]     DTW_curr        [0:SQG_SIZE-1];
+wire    [width-1:0]     p_Rword         [0:SQG_SIZE-1];
 
-reg     [width-1:0]     DTW_prev    [1:SQG_SIZE];
-reg     [width-1:0]     DTW_pprev   [1:SQG_SIZE];
+reg     [width-1:0]     DTW_prev        [0:SQG_SIZE-1];
+reg     [width-1:0]     DTW_pprev       [0:SQG_SIZE-1];
 reg     [SQG_SIZE+1:0]  running_d;
 
 reg     [width-1:0]     Minval;
@@ -71,30 +71,30 @@ reg     [31:0]          Minpos;
 // First PE
 dtw_core_pe #(
     .width(width)
-) inst_dtw_core_pe_001 (
+) inst_dtw_core_pe_0 (
     .clk  (clk),
     .rst  (rst),
     .running (running),
     .x    (Squiggle_Buffer[0]),
     .y    (Rword_buff),
-    .W    (DTW_prev[001]),
+    .W    (DTW_prev[0]),
     .N    (16'd0),
     .NW   (16'd0),
-    .DTWc (DTW_curr[001]),
-    .yp   (p_Rword[001])
+    .DTWc (DTW_curr[0]),
+    .yp   (p_Rword[0])
 );
 
 // Other PEs
 genvar m;
 generate
-for (m = 2; m <= SQG_SIZE; m = m + 1) begin
+for (m = 1; m < SQG_SIZE; m = m + 1) begin
 	dtw_core_pe #(
         .width(width)
     ) inst_dtw_core_pe_n (
         .clk    (clk),
         .rst    (rst),
         .running (running),
-        .x      (Squiggle_Buffer[m-1]),
+        .x      (Squiggle_Buffer[m]),
         .y      (p_Rword[m-1]),
         .W      (DTW_prev[m]),
         .N      (DTW_prev[m-1]),
@@ -133,16 +133,16 @@ end
 // update DTW_prev and DTW_pprev
 always @(posedge clk) begin
     if (rst) begin
-        for(k = 1; k <= SQG_SIZE; k = k + 1) begin
+        for(k = 0; k < SQG_SIZE; k = k + 1) begin
             DTW_prev [k] <= -1;
             DTW_pprev[k] <= -1;
         end
     end else if (running) begin
-        for(k = 1; k <= SQG_SIZE; k = k + 1) begin
-            if(running_d[k]) begin
+        for(k = 0; k < SQG_SIZE; k = k + 1) begin
+            if(running_d[k+1]) begin
                 DTW_prev[k] <= DTW_curr[k];
             end
-            if(running_d[k+1]) begin
+            if(running_d[k+2]) begin
                 DTW_pprev[k] <= DTW_prev[k];
             end
         end
@@ -200,8 +200,8 @@ always @(posedge clk) begin
     if (rst) begin
         Minval <= -1;
         Minpos <= 0;
-    end else if (DTW_curr[SQG_SIZE] < Minval) begin
-        Minval <= DTW_curr[SQG_SIZE];
+    end else if (DTW_curr[SQG_SIZE-1] < Minval) begin
+        Minval <= DTW_curr[SQG_SIZE-1];
         Minpos <= cycle_counter;
     end
 end

@@ -64,7 +64,7 @@ def setup_runner():
     sources=[str(s) for s in sources],
     hdl_toplevel=top_module,
     build_args=build_args,
-    waves=True,     # wave dumping can still be toggled per-test below
+    waves=True,
     verbose=True,
     always=True,
   )
@@ -74,7 +74,6 @@ runner = setup_runner()
 
 @pytest.mark.parametrize("test_case", tests or ["(no_tests_found)"])
 def test_runner(test_case, request):
-  # honor --waves and --tc from conftest.py
   waves = request.config.getoption("--waves")
   tc    = request.config.getoption("--tc")
 
@@ -84,9 +83,7 @@ def test_runner(test_case, request):
   if tc and test_case != tc:
     pytest.skip(f"--tc specified: skipping {test_case}")
 
-  # set env here (runner.test in this version has no 'env=' kwarg)
   os.environ["PYTHONPATH"] = str(test_path)
-  os.environ.setdefault("COCOTB_RESOLVE_X", "RANDOM")
 
   runner.test(
     hdl_toplevel=top_module,
