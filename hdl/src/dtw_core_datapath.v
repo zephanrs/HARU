@@ -52,7 +52,7 @@ integer k;
 reg     [31:0]          cycle_counter;
 reg     [7:0]           squiggle_buffaddress;
 
-reg     [width-1:0]     Squiggle_Buffer [1:SQG_SIZE];
+reg     [width-1:0]     Squiggle_Buffer [0:SQG_SIZE-1];
 reg     [width-1:0]     Rword_buff;
 
 wire    [width-1:0]     DTW_curr    [1:SQG_SIZE];
@@ -64,7 +64,6 @@ reg     [SQG_SIZE+1:0]  running_d;
 
 reg     [width-1:0]     Minval;
 reg     [31:0]          Minpos;
-reg     [width-1:0]     DTW_lastrow;
 
 /* ===============================
  * submodules
@@ -76,7 +75,7 @@ dtw_core_pe #(
     .clk  (clk),
     .rst  (rst),
     .running (running),
-    .x    (Squiggle_Buffer[001]),
+    .x    (Squiggle_Buffer[0]),
     .y    (Rword_buff),
     .W    (DTW_prev[001]),
     .N    (16'd0),
@@ -95,7 +94,7 @@ for (m = 2; m <= SQG_SIZE; m = m + 1) begin
         .clk    (clk),
         .rst    (rst),
         .running (running),
-        .x      (Squiggle_Buffer[m]),
+        .x      (Squiggle_Buffer[m-1]),
         .y      (p_Rword[m-1]),
         .W      (DTW_prev[m]),
         .N      (DTW_prev[m-1]),
@@ -153,7 +152,7 @@ end
 // Load squiggle sample value
 always @(posedge clk) begin
     if (rst) begin
-        for(k = 1; k <= SQG_SIZE; k = k + 1) begin
+        for(k = 0; k < SQG_SIZE; k = k + 1) begin
             Squiggle_Buffer[k] <= 0;
         end
     end else if (running) begin
@@ -166,9 +165,9 @@ end
 // Squiggle buffer address handling
 always @(posedge clk) begin
     if (rst) begin
-        squiggle_buffaddress <= 1;
+        squiggle_buffaddress <= 0;
     end else if (running) begin
-        if(running_d[0] && (squiggle_buffaddress <= 8'(SQG_SIZE))) begin
+        if(running_d[0] && (squiggle_buffaddress < SQG_SIZE - 1)) begin
             squiggle_buffaddress <= squiggle_buffaddress + 1;
         end
     end
@@ -196,24 +195,13 @@ always @(posedge clk) begin
     end
 end
 
-// Last row value
-always @(posedge clk) begin
-    if (rst) begin
-        DTW_lastrow <= -1;
-    end else if (running) begin
-        if(running_d[SQG_SIZE]) begin
-            DTW_lastrow <= DTW_curr[SQG_SIZE];
-        end
-    end
-end
-
 // Min value and position update
 always @(posedge clk) begin
     if (rst) begin
         Minval <= -1;
         Minpos <= 0;
-    end else if (DTW_lastrow < Minval) begin
-        Minval <= DTW_lastrow;
+    end else if (DTW_curr[SQG_SIZE] < Minval) begin
+        Minval <= DTW_curr[SQG_SIZE];
         Minpos <= cycle_counter;
     end
 end

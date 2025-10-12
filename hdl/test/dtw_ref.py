@@ -34,7 +34,7 @@ async def test_load_reference(dut):
   ctrl &= ~(1 << CR_RS)
   await axil.write(REG_CONTROL, ctrl.to_bytes(4, "little"))
 
-  ref_length = 200
+  ref_length = 256
   await axil.write(REG_REF_LEN, ref_length.to_bytes(4, "little"))
 
   rd = await axil.read(REG_CONTROL, 4)
@@ -47,7 +47,7 @@ async def test_load_reference(dut):
   )
   await axis.send(AxiStreamFrame(payload))
 
-  await wait_ref(axil, dut)
+  await wait_state(axil, dut, 0)
 
   mem = dut.dut.dc.inst_dtw_core_ref_mem.MEM
   for i in range(ref_length):

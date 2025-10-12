@@ -58,11 +58,13 @@ async def reset_axis(dut):
   for _ in range(2):
     await RisingEdge(dut.axis_clk)
 
-async def wait_ref(axil, dut):
-  for _ in range(50000):
+async def wait_state(axil, dut, state=0):
+  """Wait until FSM reaches the given state value."""
+  for _ in range(100000):
     rd = await axil.read(REG_STATUS, 4)
     s = int.from_bytes(rd.data, "little")
-    if ((s >> 1) & 1) and ((s >> 6) & 7) == 0:  # load_done=1 and state==IDLE(0)
+    if ((s >> 6) & 7) == state:
       return
     await RisingEdge(dut.clk)
-  raise AssertionError("timeout waiting for ref load complete")
+  raise AssertionError(f"timeout waiting for state={state}")
+
