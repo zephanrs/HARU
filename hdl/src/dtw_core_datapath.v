@@ -60,7 +60,7 @@ wire    [width-1:0]     p_Rword     [1:SQG_SIZE];
 
 reg     [width-1:0]     DTW_prev    [1:SQG_SIZE];
 reg     [width-1:0]     DTW_pprev   [1:SQG_SIZE];
-reg     [0:SQG_SIZE+1]  running_d;
+reg     [SQG_SIZE+1:0]  running_d;
 
 reg     [width-1:0]     Minval;
 reg     [31:0]          Minpos;
@@ -168,7 +168,7 @@ always @(posedge clk) begin
     if (rst) begin
         squiggle_buffaddress <= 1;
     end else if (running) begin
-        if(running_d[0] && (squiggle_buffaddress <= SQG_SIZE)) begin
+        if(running_d[0] && (squiggle_buffaddress <= 8'(SQG_SIZE))) begin
             squiggle_buffaddress <= squiggle_buffaddress + 1;
         end
     end
