@@ -158,4 +158,13 @@ dtw_accel #(
     .SINK_AXIS_tdata (axis_out_tdata)
 );
 
+initial begin
+    if ($test$plusargs("trace") != 0) begin
+        $display("[%0t] Tracing to waves.vcd (in ./build)...\n", $time);
+        $dumpfile("waves.vcd");
+        $dumpvars(0, tb_dtw_accel);
+    end
+    $display("[%0t] Model running...\n", $time);
+end
+
 endmodule
