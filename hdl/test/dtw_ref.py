@@ -70,11 +70,10 @@ async def check_ref_stream_into_pe0(dut, reference_words):
 async def test_load_reference(dut):
     start_dut(dut)
     axil = AxiLiteMaster(AxiLiteBus.from_prefix(dut, "aximl"), dut.clk)
-    axis = AxiStreamSource(AxiStreamBus.from_prefix(dut, "axis_in"), dut.axis_clk)
+    axis = AxiStreamSource(AxiStreamBus.from_prefix(dut, "axis_in"), dut.clk)
 
     await reset_dut(dut)
     await reset_core(axil)
-    await reset_axis(dut)
     await axil.write(REG_REF_LEN, (SQG_SIZE).to_bytes(4, "little"))
 
     qid = 5
@@ -84,7 +83,7 @@ async def test_load_reference(dut):
     await axis.send(AxiStreamFrame(pack_words([qid] + query)))
     await with_timeout(wait_state(axil, dut, 3), 200_000, "ns")
 
-    await wait_cycles(dut.axis_clk, 100)
+    await wait_cycles(dut.clk, 100)
 
     ref = [i + 20 for i in range(SQG_SIZE)]
     send_task = cocotb.start_soon(axis.send(AxiStreamFrame(pack_words(ref))))
@@ -96,11 +95,10 @@ async def test_load_reference(dut):
 async def test_reference_bubbles(dut):
     start_dut(dut)
     axil = AxiLiteMaster(AxiLiteBus.from_prefix(dut, "aximl"), dut.clk)
-    axis = AxiStreamSource(AxiStreamBus.from_prefix(dut, "axis_in"), dut.axis_clk)
+    axis = AxiStreamSource(AxiStreamBus.from_prefix(dut, "axis_in"), dut.clk)
 
     await reset_dut(dut)
     await reset_core(axil)
-    await reset_axis(dut)
     await axil.write(REG_REF_LEN, (SQG_SIZE).to_bytes(4, "little"))
 
     qid = 7
@@ -116,11 +114,11 @@ async def test_reference_bubbles(dut):
 
     rng = random.Random(0xb0bb1e)
     while not send_task.done():
-        await RisingEdge(dut.axis_clk)
+        await RisingEdge(dut.clk)
         if rng.random() < 0.20:
             axis.pause = True
             for _ in range(1 + rng.randrange(6)):
-                await RisingEdge(dut.axis_clk)
+                await RisingEdge(dut.clk)
             axis.pause = False
 
     await check_ref_stream_into_pe0(dut, ref)

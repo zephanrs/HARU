@@ -100,6 +100,9 @@ always @ (posedge clk) begin
     end
 end
 
+logic w_test;
+assign w_test = i_fifo_r_stb && o_fifo_not_empty;
+
 always @ ( posedge clk ) begin
     if (rst) begin
         write_ptr       <=  0;
@@ -112,7 +115,8 @@ always @ ( posedge clk ) begin
         end
 
         // Read pointer
-        if (i_fifo_r_stb && o_fifo_not_empty) begin
+        // if (i_fifo_r_stb && o_fifo_not_empty) begin
+        if (w_test) begin
             r_read_ptr  <= read_ptr;
             read_ptr    <= read_ptr + 1;
         end

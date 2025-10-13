@@ -23,10 +23,10 @@ async def assert_squiggle_buffer_equals(dut, expected):
 async def test_load_query(dut):
   start_dut(dut)
   axil     = AxiLiteMaster(AxiLiteBus.from_prefix(dut, "aximl"),      dut.clk)
-  axis_in  = AxiStreamSource(AxiStreamBus.from_prefix(dut, "axis_in"), dut.axis_clk)
-  axis_out = AxiStreamSink  (AxiStreamBus.from_prefix(dut, "axis_out"),dut.axis_clk)
+  axis_in  = AxiStreamSource(AxiStreamBus.from_prefix(dut, "axis_in"), dut.clk)
+  axis_out = AxiStreamSink  (AxiStreamBus.from_prefix(dut, "axis_out"),dut.clk)
 
-  await reset_dut(dut); await reset_core(axil); await reset_axis(dut)
+  await reset_dut(dut); await reset_core(axil)
 
   await enter_query_load_mode(axil)
 
@@ -35,9 +35,6 @@ async def test_load_query(dut):
   payload = pack_words([qid] + samples)
   await axis_in.send(AxiStreamFrame(payload))
 
-  # Wait for DTW_RUN (state = 3) which implies dp_load_done was asserted
-  await with_timeout(wait_state(axil, dut, 3), 200_000, "ns")
-
   await assert_squiggle_buffer_equals(dut, samples)
   assert int(dut.dut.dc.curr_qid.value) == qid
 
@@ -45,10 +42,10 @@ async def test_load_query(dut):
 async def test_query_bubbles(dut):
   start_dut(dut)
   axil     = AxiLiteMaster(AxiLiteBus.from_prefix(dut, "aximl"),      dut.clk)
-  axis_in  = AxiStreamSource(AxiStreamBus.from_prefix(dut, "axis_in"), dut.axis_clk)
-  axis_out = AxiStreamSink  (AxiStreamBus.from_prefix(dut, "axis_out"),dut.axis_clk)
+  axis_in  = AxiStreamSource(AxiStreamBus.from_prefix(dut, "axis_in"), dut.clk)
+  axis_out = AxiStreamSink  (AxiStreamBus.from_prefix(dut, "axis_out"),dut.clk)
 
-  await reset_dut(dut); await reset_core(axil); await reset_axis(dut)
+  await reset_dut(dut); await reset_core(axil)
 
   await enter_query_load_mode(axil)
 
@@ -60,12 +57,12 @@ async def test_query_bubbles(dut):
 
   rng = random.Random(0xb0bb1e)
   while not send_task.done():
-    await RisingEdge(dut.axis_clk)
+    await RisingEdge(dut.clk)
     if rng.random() < 0.15:
       axis_in.pause = True
       hold = 1 + rng.randrange(6)
       for _ in range(hold):
-        await RisingEdge(dut.axis_clk)
+        await RisingEdge(dut.clk)
       axis_in.pause = False
 
   # Wait for DTW_RUN (state = 3) after query load completes

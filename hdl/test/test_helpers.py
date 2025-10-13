@@ -17,22 +17,12 @@ CR_MODE  = 2   # 1 = LOAD_QUERY, 0 = NORMAL (stream reference)
 
 def start_dut(dut):
   cocotb.start_soon(Clock(dut.clk, CLK_NS, units="ns").start())
-  async def _mirror():
-    dut.axis_clk.value = dut.clk.value
-    while True:
-      await RisingEdge(dut.clk)
-      dut.axis_clk.value = 1
-      await FallingEdge(dut.clk)
-      dut.axis_clk.value = 0
-  cocotb.start_soon(_mirror())
 
 async def reset_dut(dut):
   dut.rst.value = 0
-  dut.axis_rst.value = 0
   for _ in range(5):
     await RisingEdge(dut.clk)
   dut.rst.value = 1
-  dut.axis_rst.value = 1
   for _ in range(5):
     await RisingEdge(dut.clk)
 
@@ -41,17 +31,6 @@ async def reset_core(axil):
   ctrl = int.from_bytes(rd.data, "little")
   await axil.write(REG_CONTROL, (ctrl |  (1 << CR_RESET)).to_bytes(4, "little"))
   await axil.write(REG_CONTROL, (ctrl & ~(1 << CR_RESET)).to_bytes(4, "little"))
-
-async def reset_axis(dut):
-  dut.axis_rst.setimmediatevalue(1)
-  for _ in range(2):
-    await RisingEdge(dut.axis_clk)
-  dut.axis_rst.value = 0
-  for _ in range(2):
-    await RisingEdge(dut.axis_clk)
-  dut.axis_rst.value = 1
-  for _ in range(2):
-    await RisingEdge(dut.axis_clk)
 
 async def wait_state(axil, dut, state=0):
   for _ in range(100000):

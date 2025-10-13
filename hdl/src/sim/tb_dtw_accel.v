@@ -64,9 +64,6 @@ module tb_dtw_accel #(
     output      [1:0]                   aximl_rresp,
     output      [DATA_WIDTH - 1: 0]     aximl_rdata,
 
-    //AXIS IN Stream
-    input                               axis_clk,
-    input                               axis_rst,
 
     `ifdef AXIS_IN_TUSER_EN
     input                               axis_in_tuser,
@@ -89,12 +86,11 @@ module tb_dtw_accel #(
  * Registers
  * =============================== */
 reg               r_rst;
-reg               r_axis_rst;
 reg [7:0] 	      test_id       = 0;
 
 // Workaround for weird icarus simulator bug
 always @ (*)      r_rst         = rst;
-always @ (*)      r_axis_rst    = axis_rst;
+
 
 /* ===============================
  * submodules
@@ -131,8 +127,8 @@ dtw_accel #(
     .S_AXI_rdata          (aximl_rdata),
 
     // Input AXI Stream
-    .SRC_AXIS_clk       (axis_clk),
-    .SRC_AXIS_rst       (r_axis_rst),
+    .SRC_AXIS_clk       (clk),
+    .SRC_AXIS_rst       (r_rst),
 
 `ifdef AXIS_IN_TUSER_EN
     .SRC_AXIS_tuser  (axis_in_tuser),
@@ -145,8 +141,8 @@ dtw_accel #(
     .SRC_AXIS_tdata  (axis_in_tdata),
 
     // Output AXI Stream
-    .SINK_AXIS_clk   (axis_clk),
-    .SINK_AXIS_rst   (r_axis_rst),
+    .SINK_AXIS_clk   (clk),
+    .SINK_AXIS_rst   (r_rst),
 `ifdef AXIS_IN_TUSER_EN
     .SINK_AXIS_tuser (axis_out_tuser),
 `else
