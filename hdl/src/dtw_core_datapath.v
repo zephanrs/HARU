@@ -73,7 +73,7 @@ reg     [31:0]          Minpos;
  * submodules
  * =============================== */
 wire [width-1:0] nw;
-// unsafe nw activation (not latency insensitive)
+// nw activation
 assign nw = (running_d[1] && !running_d[2]) ? 0 : -1;
 // First PE
 dtw_core_pe #(

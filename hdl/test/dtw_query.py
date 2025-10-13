@@ -136,6 +136,22 @@ def dtw(reference, query):
 
   return best_distance, best_end_pos
 
+def gen_ref_query(rng):
+  ref = [ rng.randrange(0, 1025) for _ in range(SQG_SIZE) ]
+  q = []
+  r = 0
+  for _ in range(SQG_SIZE):
+    x = ref[r]
+    p = rng.random()
+    if p < 0.25:
+      r = min(r + 2, SQG_SIZE - 1)
+    elif p < 0.75:
+      r = min(r + 1, SQG_SIZE - 1)
+      
+    y = x + rng.randint(-8, 8)
+    if y < 0: y = 0
+    q.append(y & 0xFFFF)
+  return ref, q
 
 @cocotb.test()
 async def test_load_query(dut):
@@ -265,3 +281,26 @@ async def test_query_misalignment(dut):
 
   await assert_squiggle_buffer_equals(dut, query_samples)
   await check_result(axis_out, qid, expected_distance, 200_000)
+
+@cocotb.test()
+async def test_query_random(dut):
+  axil, axis_in, axis_out = await setup(dut)
+
+  rng = random.Random(2027)
+
+  for k in range(4):
+    ref_words, query_samples = gen_ref_query(rng)
+    await load_reference(axil, axis_in, dut, ref_words)
+    await enter_query_mode(axil)
+
+    expected_distance, _ = dtw(ref_words, query_samples)
+    assert expected_distance < 65_000
+
+    qid = 0x9000 + k
+    await send_query(axis_in, qid, query_samples)
+
+    await with_timeout(wait_state(axil, dut, 3), 300_000, "ns")
+    await wait_for_dtw_run_window(dut, SQG_SIZE)
+
+    await assert_squiggle_buffer_equals(dut, query_samples)
+    await check_result(axis_out, qid, expected_distance, 300_000)
