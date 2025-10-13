@@ -99,7 +99,9 @@ wire [WIDTH-1:0]    dataout_ref;        // Reference data
 // DTW datapath signals
 reg                 dp_rst;             // dp core reset
 reg                 dp_running;         // dp core run enable
+reg                 dp_load;            // dp core load enable
 wire                dp_done;            // dp core done
+wire                dp_load_done;       // dp core load done
 reg  [31:0]         curr_qid;           // Current query id
 wire [WIDTH-1:0]    curr_minval;        // Current minimum value
 wire [31:0]         curr_position;      // Current best match position
@@ -136,12 +138,14 @@ dtw_core_datapath #(
     .clk            (clk),
     .rst            (dp_rst),
     .running        (dp_running),
+    .load           (dp_load),
     .Input_squiggle (src_fifo_data[15:0]),
     .Rword          (dataout_ref),
     .ref_len        (ref_len),
     .minval         (curr_minval),
     .position       (curr_position),
     .done           (dp_done),
+    .load_done      (dp_load_done),
 
     // debug
     .dbg_cycle_counter (dbg_cycle_counter)
@@ -226,6 +230,7 @@ always @(posedge clk) begin
         addr_ref            <= 0;
         dp_rst              <= 1;
         dp_running          <= 0;
+        dp_load             <= 0;
         stall_counter       <= 0;
         r_src_fifo_clear    <= 1;
         sink_fifo_last      <= 0;
@@ -264,19 +269,21 @@ always @(posedge clk) begin
         stall_counter           <= 0;
         r_src_fifo_clear        <= 0;
 
-        if (addr_ref < SQG_SIZE) begin
-            // Query loading
+        if (!dp_load_done) begin
+            dp_running          <= 0;
+            addr_ref            <= 0;
+
             if (!src_fifo_empty) begin
-                addr_ref        <= addr_ref + 1;
                 src_fifo_rden   <= 1;
-                dp_running      <= 1;
+                dp_load         <= 1;
             end else begin
                 src_fifo_rden   <= 0;
-                dp_running      <= 0;
+                dp_load         <= 0;
             end
         end else begin
             // Query loaded
-            addr_ref           <= addr_ref + 1;
+            dp_load             <= 0;
+            addr_ref            <= addr_ref + 1;
             src_fifo_rden       <= 0;
             dp_running          <= 1;
         end

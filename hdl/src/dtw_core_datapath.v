@@ -32,6 +32,8 @@ module dtw_core_datapath #(
     input   wire                clk,
     input   wire                rst,
     input   wire                running,        // Run enable
+    input   wire                load,           // Load enable
+
 
     input   wire [width-1:0]    Input_squiggle, // Squiggle sample
     input   wire [width-1:0]    Rword,          // Reference sample
@@ -39,6 +41,7 @@ module dtw_core_datapath #(
     output  wire [width-1:0]    minval,         // Minimum value
     output  wire [31:0]         position,       // Position of minimum value
     output  wire                done,           // Query search done
+    output  wire                load_done,
 
     // debug
     output  wire [31:0]         dbg_cycle_counter
@@ -50,7 +53,7 @@ module dtw_core_datapath #(
 integer k;
 
 reg     [31:0]          cycle_counter;
-reg     [7:0]           squiggle_buffaddress;
+reg     [8:0]           squiggle_buffaddress;
 
 reg     [width-1:0]     Squiggle_Buffer [0:SQG_SIZE-1];
 reg     [width-1:0]     ref_buff        [0:1];
@@ -113,6 +116,7 @@ assign minval     = Minval;
 assign position   = Minpos;
 assign done       = (cycle_counter >= ref_len);
 assign dbg_cycle_counter = cycle_counter;
+assign load_done  = squiggle_buffaddress[8];
 
 /* ===============================
  * synchronous logic
@@ -163,9 +167,9 @@ always @(posedge clk) begin
         for(k = 0; k < SQG_SIZE; k = k + 1) begin
             Squiggle_Buffer[k] <= 0;
         end
-    end else if (running) begin
-        if (!running_d[SQG_SIZE-1]) begin
-            Squiggle_Buffer[squiggle_buffaddress] <= query_buff;
+    end else if (load) begin
+        if (!load_done) begin
+            Squiggle_Buffer[squiggle_buffaddress[7:0]] <= query_buff;
         end
     end
 end
@@ -174,14 +178,14 @@ end
 always @(posedge clk) begin
     if (rst) begin
         squiggle_buffaddress <= 0;
-    end else if (running) begin
-        if(squiggle_buffaddress < SQG_SIZE - 1) begin
+    end else if (load) begin
+        if(!load_done) begin
             squiggle_buffaddress <= squiggle_buffaddress + 1;
         end
     end
 end
 
-// reference sample loading
+// reference sample load
 always @(posedge clk) begin
     if (rst) begin
         ref_buff[0] <= 0;
