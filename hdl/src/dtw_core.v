@@ -255,9 +255,6 @@ always @(posedge clk) begin
 
         if (!src_fifo_empty) begin
             curr_qid        <= src_fifo_data;
-            dp_running      <= 1;
-        end else begin
-            dp_running      <= 0;
         end
     end
     DTW_Q_RUN: begin
@@ -270,7 +267,7 @@ always @(posedge clk) begin
         if (addr_ref < SQG_SIZE) begin
             // Query loading
             if (!src_fifo_empty) begin
-                addr_ref       <= addr_ref + 1;
+                addr_ref        <= addr_ref + 1;
                 src_fifo_rden   <= 1;
                 dp_running      <= 1;
             end else begin

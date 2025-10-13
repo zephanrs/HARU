@@ -53,7 +53,8 @@ reg     [31:0]          cycle_counter;
 reg     [7:0]           squiggle_buffaddress;
 
 reg     [width-1:0]     Squiggle_Buffer [0:SQG_SIZE-1];
-reg     [width-1:0]     Rword_buff;
+reg     [width-1:0]     ref_buff        [0:1];
+reg     [width-1:0]     query_buff;
 
 wire    [width-1:0]     DTW_curr        [0:SQG_SIZE-1];
 wire    [width-1:0]     p_Rword         [0:SQG_SIZE-1];
@@ -76,7 +77,7 @@ dtw_core_pe #(
     .rst  (rst),
     .running (running),
     .x    (Squiggle_Buffer[0]),
-    .y    (Rword_buff),
+    .y    (ref_buff[1]),
     .W    (DTW_prev[0]),
     .N    (16'd0),
     .NW   (16'd0),
@@ -147,6 +148,15 @@ always @(posedge clk) begin
     end
 end
 
+// Buffer input squiggle (twice)
+always @(posedge clk) begin
+    if (rst) begin
+        query_buff <= 0;
+    end else begin
+        query_buff <= Input_squiggle;
+    end
+end
+
 // Load squiggle sample value
 always @(posedge clk) begin
     if (rst) begin
@@ -154,8 +164,8 @@ always @(posedge clk) begin
             Squiggle_Buffer[k] <= 0;
         end
     end else if (running) begin
-        if (running_d[0]) begin
-            Squiggle_Buffer[squiggle_buffaddress] <= Input_squiggle;
+        if (!running_d[SQG_SIZE-1]) begin
+            Squiggle_Buffer[squiggle_buffaddress] <= query_buff;
         end
     end
 end
@@ -165,7 +175,7 @@ always @(posedge clk) begin
     if (rst) begin
         squiggle_buffaddress <= 0;
     end else if (running) begin
-        if(running_d[0] && (squiggle_buffaddress < SQG_SIZE - 1)) begin
+        if(squiggle_buffaddress < SQG_SIZE - 1) begin
             squiggle_buffaddress <= squiggle_buffaddress + 1;
         end
     end
@@ -174,11 +184,11 @@ end
 // reference sample loading
 always @(posedge clk) begin
     if (rst) begin
-        Rword_buff <= 0;
+        ref_buff[0] <= 0;
+        ref_buff[1] <= 0;
     end else if (running) begin
-        if(running_d[0]) begin
-            Rword_buff <= Rword;
-        end
+        ref_buff[0] <= Rword;
+        ref_buff[1] <= ref_buff[0];
     end
 end
 
