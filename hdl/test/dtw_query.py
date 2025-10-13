@@ -1,7 +1,10 @@
 # dtw_query.py
 import cocotb
 from cocotb.triggers import RisingEdge, with_timeout
-from cocotbext.axi import AxiLiteBus, AxiLiteMaster, AxiStreamBus, AxiStreamSource, AxiStreamSink, AxiStreamFrame
+from cocotbext.axi import (
+  AxiLiteBus, AxiLiteMaster,
+  AxiStreamBus, AxiStreamSource, AxiStreamSink, AxiStreamFrame,
+)
 from test_helpers import *
 import random
 
@@ -22,6 +25,7 @@ async def test_load_query(dut):
   axil     = AxiLiteMaster(AxiLiteBus.from_prefix(dut, "aximl"),      dut.clk)
   axis_in  = AxiStreamSource(AxiStreamBus.from_prefix(dut, "axis_in"), dut.axis_clk)
   axis_out = AxiStreamSink  (AxiStreamBus.from_prefix(dut, "axis_out"),dut.axis_clk)
+
   await reset_dut(dut); await reset_core(axil); await reset_axis(dut)
 
   await enter_query_load_mode(axil)
@@ -31,7 +35,8 @@ async def test_load_query(dut):
   payload = pack_words([qid] + samples)
   await axis_in.send(AxiStreamFrame(payload))
 
-  await with_timeout(wait_state(axil, dut, 1), 200_000, "ns")
+  # Wait for DTW_RUN (state = 3) which implies dp_load_done was asserted
+  await with_timeout(wait_state(axil, dut, 3), 200_000, "ns")
 
   await assert_squiggle_buffer_equals(dut, samples)
   assert int(dut.dut.dc.curr_qid.value) == qid
@@ -42,6 +47,7 @@ async def test_query_bubbles(dut):
   axil     = AxiLiteMaster(AxiLiteBus.from_prefix(dut, "aximl"),      dut.clk)
   axis_in  = AxiStreamSource(AxiStreamBus.from_prefix(dut, "axis_in"), dut.axis_clk)
   axis_out = AxiStreamSink  (AxiStreamBus.from_prefix(dut, "axis_out"),dut.axis_clk)
+
   await reset_dut(dut); await reset_core(axil); await reset_axis(dut)
 
   await enter_query_load_mode(axil)
@@ -62,9 +68,10 @@ async def test_query_bubbles(dut):
         await RisingEdge(dut.axis_clk)
       axis_in.pause = False
 
-  await with_timeout(wait_state(axil, dut, 1), 300_000, "ns")
+  # Wait for DTW_RUN (state = 3) after query load completes
+  await with_timeout(wait_state(axil, dut, 3), 300_000, "ns")
 
-  dp = dut.dut.dc.inst_dtw_core_datapath
+  dp = get_dp(dut)
   for i, exp in enumerate(samples):
     assert dp.Squiggle_Buffer[i].value.integer == (exp & 0xFFFF)
   assert int(dut.dut.dc.curr_qid.value) == qid
