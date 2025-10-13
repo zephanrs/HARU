@@ -6,6 +6,7 @@ from cocotbext.axi import (
 )
 from test_helpers import *
 import random
+import numpy as np
 
 
 CLK_NS = 10
@@ -26,6 +27,7 @@ async def wait_for_dtw_run_window(dut, sqg_size=256):
 async def assert_squiggle_buffer_equals(dut, expected):
   dp = get_dp(dut)
   buf = dp.Squiggle_Buffer
+
   for i, exp in enumerate(expected):
     got = buf[i].value.integer
     exp &= 0xFFFF
@@ -34,10 +36,13 @@ async def assert_squiggle_buffer_equals(dut, expected):
 
 async def setup(dut):
   start_dut(dut)
+
   axil     = AxiLiteMaster(AxiLiteBus.from_prefix(dut, "aximl"),      dut.clk,      reset=None)
   axis_in  = AxiStreamSource(AxiStreamBus.from_prefix(dut, "axis_in"), dut.axis_clk, reset=None)
   axis_out = AxiStreamSink  (AxiStreamBus.from_prefix(dut, "axis_out"),dut.axis_clk, reset=None)
+
   await reset_dut(dut)
+
   return axil, axis_in, axis_out
 
 
@@ -75,6 +80,7 @@ async def enter_query_mode(axil):
 async def send_query(axis_in, qid, samples):
   packet  = [qid] + samples
   payload = bytearray().join((w & 0xFFFFFFFF).to_bytes(4, "little") for w in packet)
+
   fr = AxiStreamFrame(payload)
   await axis_in.send(fr)
 
@@ -93,6 +99,47 @@ async def check_result(axis_out, exp_qid, exp_pos, timeout_ns):
   assert distance == 0, f"distance {distance} != 0"
 
 
+def sdtw(reference, query):
+  r = np.asarray(reference, dtype=np.uint16)
+  q = np.asarray(query,     dtype=np.uint16)
+
+  n = int(q.size)
+  m = int(r.size)
+
+  dp = np.full((n + 1, m + 1), np.uint16(0xFFFF), dtype=np.uint16)
+
+  dp[0, :] = np.uint16(0)
+  # dp[>0, 0] stays 0xFFFF (disallow consuming query with no reference)
+
+  for i in range(1, n + 1):
+    qi = q[i - 1]
+
+    for j in range(1, m + 1):
+      rj = r[j - 1]
+
+      hi = np.maximum(qi, rj, dtype=np.uint16)
+      lo = np.minimum(qi, rj, dtype=np.uint16)
+      cost = np.uint16(hi - lo)
+
+      a = dp[i - 1, j]
+      b = dp[i,     j - 1]
+      c = dp[i - 1, j - 1]
+      best_prev = a if a <= b else b
+      best_prev = best_prev if best_prev <= c else c
+
+      if best_prev == np.uint16(0xFFFF):
+        dp[i, j] = np.uint16(0xFFFF)
+      else:
+        dp[i, j] = np.uint16(best_prev + cost)
+
+  last_row = dp[n, 1:]
+  j_star = int(np.argmin(last_row))
+  best_end_pos = j_star
+  best_distance = int(last_row[j_star])
+
+  return best_distance, best_end_pos
+
+
 @cocotb.test()
 async def test_load_query(dut):
   axil, axis_in, axis_out = await setup(dut)
@@ -107,9 +154,10 @@ async def test_load_query(dut):
 
   qid = 7
   query_samples = ref_words[offset:offset+SQG_SIZE]
+
   await send_query(axis_in, qid, query_samples)
 
-  await with_timeout(wait_state(axil, dut, 4), 100_000, "ns")
+  await with_timeout(wait_state(axil, dut, 3), 100_000, "ns")
   await wait_for_dtw_run_window(dut, SQG_SIZE)
 
   await assert_squiggle_buffer_equals(dut, query_samples)
@@ -125,6 +173,7 @@ async def test_multiple_query(dut):
 
   ref_words = [(i & 0xFFFF) for i in range(REF_LEN)]
   await load_reference(axil, axis_in, dut, ref_words)
+
   await enter_query_mode(axil)
 
   random.seed(42)
@@ -136,7 +185,8 @@ async def test_multiple_query(dut):
     samples = ref_words[start:start + SQG_SIZE]
 
     await send_query(axis_in, qid, samples)
-    await with_timeout(wait_state(axil, dut, 4), 200_000, "ns")
+
+    await with_timeout(wait_state(axil, dut, 3), 200_000, "ns")
 
     await check_result(axis_out, qid, start + SQG_SIZE - 1, 300_000)
 
@@ -147,6 +197,7 @@ async def test_noisy_query_alignment(dut):
 
   ref_words = [(i & 0xFFFF) for i in range(512)]
   await load_reference(axil, axis_in, dut, ref_words)
+
   await enter_query_mode(axil)
 
   random.seed(123)
@@ -155,17 +206,15 @@ async def test_noisy_query_alignment(dut):
   base = ref_words[start:start + SQG_SIZE]
 
   noise_choices = (-2, -1, 0, 0, 0, 0, 1, 2)
-
   deltas = [random.choice(noise_choices) for _ in range(SQG_SIZE)]
   noisy  = [ (x + d) & 0xFFFF for x, d in zip(base, deltas) ]
 
-  expected_distance = sum(abs(d) for d in deltas)
-  exp_pos = start + SQG_SIZE - 1
+  expected_distance, expected_end_pos = sdtw(ref_words, noisy)
 
   qid = 33
   await send_query(axis_in, qid, noisy)
 
-  await with_timeout(wait_state(axil, dut, 4), 200_000, "ns")
+  await with_timeout(wait_state(axil, dut, 3), 200_000, "ns")
 
   frame = await with_timeout(axis_out.recv(), 200_000, "ns")
   data  = bytes(frame)
@@ -177,11 +226,10 @@ async def test_noisy_query_alignment(dut):
 
   assert got_qid == qid, f"qid {got_qid} != {qid}"
 
-  pos_err = abs(position - exp_pos)
-  assert pos_err <= 5, f"position {position} too far from {exp_pos} (err {pos_err} > 5)"
+  pos_err = abs(position - expected_end_pos)
+  assert pos_err <= 5, f"position {position} too far from {expected_end_pos} (err {pos_err} > 5)"
 
-  dist_err = abs(int(distance) - int(expected_distance))
-  assert dist_err <= 30, f"distance {distance} too far from expected {expected_distance} (err {dist_err} > 30)"
+  assert int(distance) == int(expected_distance), f"distance {distance} != expected {expected_distance}"
 
 
 @cocotb.test()
@@ -219,7 +267,7 @@ async def test_load_query_gap_after_qid(dut):
 
   await send_task
 
-  await with_timeout(wait_state(axil, dut, 4), 200_000, "ns")
+  await with_timeout(wait_state(axil, dut, 3), 200_000, "ns")
   await wait_for_dtw_run_window(dut, SQG_SIZE)
 
   await assert_squiggle_buffer_equals(dut, query_samples)
@@ -233,6 +281,7 @@ async def test_query_with_random_bubbles(dut):
   REF_LEN = 1024
   ref_words = [(i & 0xFFFF) for i in range(REF_LEN)]
   await load_reference(axil, axis_in, dut, ref_words)
+
   await enter_query_mode(axil)
 
   rng = random.Random(2025)
@@ -252,6 +301,7 @@ async def test_query_with_random_bubbles(dut):
 
   while not send_task.done():
     await RisingEdge(dut.axis_clk)
+
     if rng.random() < pause_prob:
       axis_in.pause = True
       hold = 1 + rng.randrange(max(1, max_pause_cycles))
@@ -261,7 +311,7 @@ async def test_query_with_random_bubbles(dut):
 
   await send_task
 
-  await with_timeout(wait_state(axil, dut, 4), 300_000, "ns")
+  await with_timeout(wait_state(axil, dut, 3), 300_000, "ns")
   await wait_for_dtw_run_window(dut, SQG_SIZE)
 
   await assert_squiggle_buffer_equals(dut, query_samples)
