@@ -75,7 +75,7 @@ module dtw_core #(
 // Operation mode
 localparam
     MODE_NORMAL = 1'b0,
-    MODE_LOAD_REF = 1'b1;
+    MODE_LOAD_QUERY = 1'b1;
 
 // FSM states
 localparam [2:0] // n states
@@ -83,13 +83,12 @@ localparam [2:0] // n states
     REF_LOAD = 1,
     DTW_Q_INIT = 2,
     DTW_Q_LOAD = 3,
-    DTW_Q_RUN = 4,
-    DTW_Q_DONE = 5;
+    DTW_RUN = 4,
+    DTW_DONE = 5;
 
 /* ===============================
  * registers/wires
  * =============================== */
-reg r_load_done;
 reg r_src_fifo_clear;
 
 // Ref mem signals
@@ -155,7 +154,7 @@ dtw_core_datapath #(
 /* ===============================
  * asynchronous logic
  * =============================== */
-assign load_done = r_load_done;
+assign load_done = dp_load_done;
 assign src_fifo_clear = r_src_fifo_clear;
 assign dbg_state = r_state;
 assign dbg_addr_ref = addr_ref;
@@ -169,15 +168,12 @@ assign dbg_curr_qid = curr_qid;
 always @(posedge clk) begin
     if (rst) begin
         r_state <= IDLE;
-        r_load_done <= 0;
     end else begin
         case (r_state)
         IDLE: begin
             if (rs) begin
-                if (op_mode == MODE_NORMAL && r_load_done == 1) begin
+                if (op_mode == MODE_LOAD_QUERY && dp_load_done == 0) begin
                     r_state <= DTW_Q_INIT;
-                end else if (op_mode == MODE_LOAD_REF && r_load_done == 0) begin
-                    r_state <= REF_LOAD;
                 end else begin
                     r_state <= IDLE;
                 end
@@ -189,8 +185,7 @@ always @(posedge clk) begin
             if (addr_ref < REFMEM_PTR_WIDTH'(ref_len)) begin
                 r_state <= REF_LOAD;
             end else begin
-                r_load_done <= 1;
-                r_state <= IDLE;
+                r_state <= DTW_RUN;
             end
         end
         DTW_Q_INIT: begin
@@ -204,19 +199,19 @@ always @(posedge clk) begin
             if (!dp_load_done) begin
                 r_state <= DTW_Q_LOAD;
             end else begin
-                r_state <= DTW_Q_RUN;
+                r_state <= REF_LOAD;
             end
         end
-        DTW_Q_RUN: begin
+        DTW_RUN: begin
             if (!dp_done) begin
-                r_state <= DTW_Q_RUN;
+                r_state <= DTW_RUN;
             end else begin
-                r_state <= DTW_Q_DONE;
+                r_state <= DTW_DONE;
             end
         end
-        DTW_Q_DONE: begin
+        DTW_DONE: begin
             if (sink_fifo_full || stall_counter < 2'h3) begin
-                r_state <= DTW_Q_DONE;
+                r_state <= DTW_DONE;
             end else begin
                 r_state <= IDLE;
             end
@@ -248,7 +243,7 @@ always @(posedge clk) begin
         busy                <= 1;
         src_fifo_rden       <= 1;
         sink_fifo_wren      <= 0;
-        dp_rst              <= 1;
+        dp_rst              <= 0;
         dp_running          <= 0;
         stall_counter       <= 0;
         r_src_fifo_clear    <= 0;
@@ -256,6 +251,9 @@ always @(posedge clk) begin
 
         if (!src_fifo_empty && src_fifo_rden) begin
             addr_ref        <= addr_ref + 1;
+        end
+        if (addr_ref == REFMEM_PTR_WIDTH'(ref_len)) begin
+            addr_ref        <= 0;
         end
     end
     DTW_Q_INIT: begin
@@ -287,7 +285,7 @@ always @(posedge clk) begin
             dp_load             <= 0;
         end
     end
-    DTW_Q_RUN: begin
+    DTW_RUN: begin
         busy                    <= 1;
         sink_fifo_wren          <= 0;
         dp_rst                  <= 0;
@@ -295,12 +293,12 @@ always @(posedge clk) begin
         r_src_fifo_clear        <= 0;
 
         // Query loaded
-        dp_load             <= 0;
-        addr_ref            <= addr_ref + 1;
-        src_fifo_rden       <= 0;
-        dp_running          <= 1;
+        dp_load                 <= 0;
+        addr_ref                <= addr_ref + 1;
+        src_fifo_rden           <= 0;
+        dp_running              <= 1;
     end
-    DTW_Q_DONE: begin
+    DTW_DONE: begin
         busy            <= 1;
         src_fifo_rden   <= 0;
         dp_rst          <= 0;
