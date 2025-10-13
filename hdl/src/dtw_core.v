@@ -82,8 +82,9 @@ localparam [2:0] // n states
     IDLE = 0,
     REF_LOAD = 1,
     DTW_Q_INIT = 2,
-    DTW_Q_RUN = 3,
-    DTW_Q_DONE = 4;
+    DTW_Q_LOAD = 3,
+    DTW_Q_RUN = 4,
+    DTW_Q_DONE = 5;
 
 /* ===============================
  * registers/wires
@@ -194,9 +195,16 @@ always @(posedge clk) begin
         end
         DTW_Q_INIT: begin
             if (!src_fifo_empty) begin
-                r_state <= DTW_Q_RUN;
+                r_state <= DTW_Q_LOAD;
             end else begin
                 r_state <= DTW_Q_INIT;
+            end
+        end
+        DTW_Q_LOAD: begin
+            if (!dp_load_done) begin
+                r_state <= DTW_Q_LOAD;
+            end else begin
+                r_state <= DTW_Q_RUN;
             end
         end
         DTW_Q_RUN: begin
@@ -262,6 +270,23 @@ always @(posedge clk) begin
             curr_qid        <= src_fifo_data;
         end
     end
+    DTW_Q_LOAD: begin
+        busy                    <= 1;
+        sink_fifo_wren          <= 0;
+        dp_rst                  <= 0;
+        stall_counter           <= 0;
+        r_src_fifo_clear        <= 0;
+        dp_running              <= 0;
+        addr_ref                <= 0;
+
+        if (!dp_load_done && !src_fifo_empty) begin
+            src_fifo_rden       <= 1;
+            dp_load             <= 1;
+        end else begin
+            src_fifo_rden       <= 0;
+            dp_load             <= 0;
+        end
+    end
     DTW_Q_RUN: begin
         busy                    <= 1;
         sink_fifo_wren          <= 0;
@@ -269,24 +294,11 @@ always @(posedge clk) begin
         stall_counter           <= 0;
         r_src_fifo_clear        <= 0;
 
-        if (!dp_load_done) begin
-            dp_running          <= 0;
-            addr_ref            <= 0;
-
-            if (!src_fifo_empty) begin
-                src_fifo_rden   <= 1;
-                dp_load         <= 1;
-            end else begin
-                src_fifo_rden   <= 0;
-                dp_load         <= 0;
-            end
-        end else begin
-            // Query loaded
-            dp_load             <= 0;
-            addr_ref            <= addr_ref + 1;
-            src_fifo_rden       <= 0;
-            dp_running          <= 1;
-        end
+        // Query loaded
+        dp_load             <= 0;
+        addr_ref            <= addr_ref + 1;
+        src_fifo_rden       <= 0;
+        dp_running          <= 1;
     end
     DTW_Q_DONE: begin
         busy            <= 1;

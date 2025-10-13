@@ -109,7 +109,7 @@ async def test_load_query(dut):
   query_samples = ref_words[offset:offset+SQG_SIZE]
   await send_query(axis_in, qid, query_samples)
 
-  await with_timeout(wait_state(axil, dut, 3), 100_000, "ns")
+  await with_timeout(wait_state(axil, dut, 4), 100_000, "ns")
   await wait_for_dtw_run_window(dut, SQG_SIZE)
 
   await assert_squiggle_buffer_equals(dut, query_samples)
@@ -136,7 +136,7 @@ async def test_multiple_query(dut):
     samples = ref_words[start:start + SQG_SIZE]
 
     await send_query(axis_in, qid, samples)
-    await with_timeout(wait_state(axil, dut, 3), 200_000, "ns")
+    await with_timeout(wait_state(axil, dut, 4), 200_000, "ns")
 
     await check_result(axis_out, qid, start + SQG_SIZE - 1, 300_000)
 
@@ -165,7 +165,7 @@ async def test_noisy_query_alignment(dut):
   qid = 33
   await send_query(axis_in, qid, noisy)
 
-  await with_timeout(wait_state(axil, dut, 3), 200_000, "ns")
+  await with_timeout(wait_state(axil, dut, 4), 200_000, "ns")
 
   frame = await with_timeout(axis_out.recv(), 200_000, "ns")
   data  = bytes(frame)
@@ -219,7 +219,7 @@ async def test_load_query_gap_after_qid(dut):
 
   await send_task
 
-  await with_timeout(wait_state(axil, dut, 3), 200_000, "ns")
+  await with_timeout(wait_state(axil, dut, 4), 200_000, "ns")
   await wait_for_dtw_run_window(dut, SQG_SIZE)
 
   await assert_squiggle_buffer_equals(dut, query_samples)
@@ -261,7 +261,7 @@ async def test_query_with_random_bubbles(dut):
 
   await send_task
 
-  await with_timeout(wait_state(axil, dut, 3), 300_000, "ns")
+  await with_timeout(wait_state(axil, dut, 4), 300_000, "ns")
   await wait_for_dtw_run_window(dut, SQG_SIZE)
 
   await assert_squiggle_buffer_equals(dut, query_samples)
