@@ -227,45 +227,45 @@ assign wren_ref = (r_state == REF_LOAD) && !src_fifo_empty && src_fifo_rden;
 always @(posedge clk) begin
     case (r_state)
     IDLE: begin
-        busy                <= 0;
-        src_fifo_rden       <= 0;
-        sink_fifo_wren      <= 0;
-        addr_ref            <= 0;
-        dp_rst              <= 1;
-        dp_running          <= 0;
-        dp_load             <= 0;
-        stall_counter       <= 0;
-        r_src_fifo_clear    <= 1;
-        sink_fifo_last      <= 0;
-        curr_qid            <= 0;
+        busy                    <= 0;
+        src_fifo_rden           <= 0;
+        sink_fifo_wren          <= 0;
+        addr_ref                <= 0;
+        dp_rst                  <= 1;
+        dp_running              <= 0;
+        dp_load                 <= 0;
+        stall_counter           <= 0;
+        r_src_fifo_clear        <= 1;
+        sink_fifo_last          <= 0;
+        curr_qid                <= 0;
     end
     REF_LOAD: begin
-        busy                <= 1;
-        src_fifo_rden       <= 1;
-        sink_fifo_wren      <= 0;
-        dp_rst              <= 0;
-        dp_running          <= 0;
-        stall_counter       <= 0;
-        r_src_fifo_clear    <= 0;
-        r_dbg_nquery        <= 0;
+        busy                    <= 1;
+        src_fifo_rden           <= 1;
+        sink_fifo_wren          <= 0;
+        dp_rst                  <= 0;
+        dp_running              <= 0;
+        stall_counter           <= 0;
+        r_src_fifo_clear        <= 0;
+        r_dbg_nquery            <= 0;
 
         if (!src_fifo_empty && src_fifo_rden) begin
-            addr_ref        <= addr_ref + 1;
+            addr_ref            <= addr_ref + 1;
         end
         if (addr_ref == REFMEM_PTR_WIDTH'(ref_len)) begin
-            addr_ref        <= 0;
+            addr_ref            <= 0;
         end
     end
     DTW_Q_INIT: begin
-        busy                <= 1;
-        src_fifo_rden       <= 1;
-        sink_fifo_wren      <= 0;
-        dp_rst              <= 0;
-        stall_counter       <= 0;
-        r_src_fifo_clear    <= 0;
+        busy                    <= 1;
+        src_fifo_rden           <= 1;
+        sink_fifo_wren          <= 0;
+        dp_rst                  <= 0;
+        stall_counter           <= 0;
+        r_src_fifo_clear        <= 0;
 
         if (!src_fifo_empty) begin
-            curr_qid        <= src_fifo_data;
+            curr_qid            <= src_fifo_data;
         end
     end
     DTW_Q_LOAD: begin
@@ -299,14 +299,14 @@ always @(posedge clk) begin
         dp_running              <= 1;
     end
     DTW_DONE: begin
-        busy            <= 1;
-        src_fifo_rden   <= 0;
-        dp_rst          <= 0;
-        dp_running      <= 0;
+        busy                    <= 1;
+        src_fifo_rden           <= 0;
+        dp_rst                  <= 0;
+        dp_running              <= 0;
 
         // Serialize output
         if (!sink_fifo_full) begin
-            stall_counter <= stall_counter + 1;
+            stall_counter       <= stall_counter + 1;
 
             if (stall_counter == 0) begin
                 sink_fifo_last  <= 0;
@@ -329,15 +329,15 @@ always @(posedge clk) begin
         end 
     end
     default: begin
-        busy                <= 0;
-        src_fifo_rden       <= 0;
-        sink_fifo_wren      <= 0;
-        addr_ref            <= 0;
-        dp_rst              <= 1;
-        dp_running          <= 0;
-        stall_counter       <= 0;
-        r_src_fifo_clear    <= 1;
-        sink_fifo_last      <= 0;
+        busy                    <= 0;
+        src_fifo_rden           <= 0;
+        sink_fifo_wren          <= 0;
+        addr_ref                <= 0;
+        dp_rst                  <= 1;
+        dp_running              <= 0;
+        stall_counter           <= 0;
+        r_src_fifo_clear        <= 1;
+        sink_fifo_last          <= 0;
     end
     endcase
 end
