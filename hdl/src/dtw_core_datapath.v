@@ -72,6 +72,9 @@ reg     [31:0]          Minpos;
 /* ===============================
  * submodules
  * =============================== */
+wire [width-1:0] nw;
+// unsafe nw activation (not latency insensitive)
+assign nw = (running_d[1] && !running_d[2]) ? 0 : -1;
 // First PE
 dtw_core_pe #(
     .width(width)
@@ -82,8 +85,8 @@ dtw_core_pe #(
     .x    (Squiggle_Buffer[0]),
     .y    (ref_buff[1]),
     .W    (DTW_prev[0]),
-    .N    (16'd0),
-    .NW   (16'd0),
+    .N    (-1),
+    .NW   (nw),
     .DTWc (DTW_curr[0]),
     .yp   (p_Rword[0])
 );
@@ -212,7 +215,7 @@ always @(posedge clk) begin
     if (rst) begin
         Minval <= -1;
         Minpos <= 0;
-    end else if (DTW_curr[SQG_SIZE-1] < Minval) begin
+    end else if (cycle_counter == ref_len - 1) begin
         Minval <= DTW_curr[SQG_SIZE-1];
         Minpos <= cycle_counter;
     end

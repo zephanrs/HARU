@@ -241,3 +241,27 @@ async def test_query_bubble(dut):
 
   await assert_squiggle_buffer_equals(dut, query_samples)
   await check_result(axis_out, qid, 0, 300_000)
+
+
+@cocotb.test()
+async def test_query_misalignment(dut):
+  axil, axis_in, axis_out = await setup(dut)
+
+  ref_words = [(i & 0xFFFF) for i in range(SQG_SIZE)]
+  await load_reference(axil, axis_in, dut, ref_words)
+
+  await enter_query_mode(axil)
+
+  shift = 16
+  qid = 0x1234
+  query_samples = ref_words[shift:] + [0] * shift
+
+  expected_distance, _ = dtw(ref_words, query_samples)
+
+  await send_query(axis_in, qid, query_samples)
+
+  await with_timeout(wait_state(axil, dut, 3), 200_000, "ns")
+  await wait_for_dtw_run_window(dut, SQG_SIZE)
+
+  await assert_squiggle_buffer_equals(dut, query_samples)
+  await check_result(axis_out, qid, expected_distance, 200_000)
