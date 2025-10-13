@@ -60,7 +60,7 @@ wire    [width-1:0]     p_Rword         [0:SQG_SIZE-1];
 
 reg     [width-1:0]     DTW_prev        [0:SQG_SIZE-1];
 reg     [width-1:0]     DTW_pprev       [0:SQG_SIZE-1];
-reg     [SQG_SIZE+1:0]  running_d;
+reg     [SQG_SIZE:0]    running_d;
 
 reg     [width-1:0]     Minval;
 reg     [31:0]          Minpos;
@@ -141,8 +141,6 @@ always @(posedge clk) begin
         for(k = 0; k < SQG_SIZE; k = k + 1) begin
             if(running_d[k+1]) begin
                 DTW_prev[k] <= DTW_curr[k];
-            end
-            if(running_d[k+2]) begin
                 DTW_pprev[k] <= DTW_prev[k];
             end
         end
