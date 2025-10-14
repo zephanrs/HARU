@@ -43,35 +43,37 @@ async def test_load_query(dut):
 
 @cocotb.test()
 async def test_query_bubbles(dut):
-  start_dut(dut)
-  axil     = AxiLiteMaster(AxiLiteBus.from_prefix(dut, "aximl"),      dut.clk)
-  axis_in  = AxiStreamSource(AxiStreamBus.from_prefix(dut, "axis_in"), dut.clk)
-  axis_out = AxiStreamSink  (AxiStreamBus.from_prefix(dut, "axis_out"),dut.clk)
+    start_dut(dut)
+    axil     = AxiLiteMaster(AxiLiteBus.from_prefix(dut, "aximl"),      dut.clk)
+    axis_in  = AxiStreamSource(AxiStreamBus.from_prefix(dut, "axis_in"), dut.clk)
+    axis_out = AxiStreamSink  (AxiStreamBus.from_prefix(dut, "axis_out"), dut.clk)
 
-  await reset_dut(dut); await reset_core(axil)
-  await axil.write(REG_REF_LEN, (1).to_bytes(4, "little"))
+    await reset_dut(dut)
+    await reset_core(axil)
+    await axil.write(REG_REF_LEN, (1).to_bytes(4, "little"))
 
-  await enter_query_load_mode(axil)
+    await enter_query_load_mode(axil)
 
-  qid = 0xA55A
-  samples = [(i & 0xFFFF) for i in range(SQG_SIZE)]
-  fr = AxiStreamFrame(pack_words([qid] + samples))
+    qid = 0xA55A
+    samples = [(i & 0xFFFF) for i in range(SQG_SIZE)]
+    payload = pack_words([qid] + samples)
 
-  send_task = cocotb.start_soon(axis_in.send(fr))
+    rng = random.Random(0xb0bb1e)
 
-  rng = random.Random(0xb0bb1e)
-  while not send_task.done():
-    await RisingEdge(dut.clk)
-    if rng.random() < 0.15:
-      axis_in.pause = True
-      hold = 1 + rng.randrange(6)
-      for _ in range(hold):
-        await RisingEdge(dut.clk)
-      axis_in.pause = False
+    def variable_idle_gen():
+        while True:
+            yield False
+            for _ in range(rng.randrange(7)):
+                yield True
 
-  await with_timeout(wait_state(axil, dut, 3), 300_000, "ns")
+    axis_in.set_pause_generator(variable_idle_gen())
 
-  dp = get_dp(dut)
-  for i, exp in enumerate(samples):
-    assert dp.Squiggle_Buffer[i].value.integer == (exp & 0xFFFF)
-  assert int(dut.dut.dc.curr_qid.value) == qid
+    await axis_in.send(AxiStreamFrame(payload))
+
+    await with_timeout(wait_state(axil, dut, 3), 300_000, "ns")
+
+    dp = get_dp(dut)
+    for i, exp in enumerate(samples):
+        got = dp.Squiggle_Buffer[i].value.integer
+        assert got == (exp & 0xFFFF), f"Squiggle_Buffer[{i}]={got} != {(exp & 0xFFFF)}"
+    assert int(dut.dut.dc.curr_qid.value) == qid
