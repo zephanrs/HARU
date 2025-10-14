@@ -2,7 +2,7 @@ import cocotb
 from cocotb.triggers import RisingEdge, with_timeout
 from cocotbext.axi import (
   AxiLiteBus, AxiLiteMaster,
-  AxiStreamBus, AxiStreamSource, AxiStreamSink, AxiStreamFrame,
+  AxiStreamBus, AxiStreamSource, AxiStreamFrame,
 )
 from test_helpers import *
 import random
@@ -24,7 +24,6 @@ async def test_load_query(dut):
   start_dut(dut)
   axil     = AxiLiteMaster(AxiLiteBus.from_prefix(dut, "aximl"),      dut.clk)
   axis_in  = AxiStreamSource(AxiStreamBus.from_prefix(dut, "axis_in"), dut.clk)
-  axis_out = AxiStreamSink  (AxiStreamBus.from_prefix(dut, "axis_out"),dut.clk)
 
   await reset_dut(dut); await reset_core(axil)
   await axil.write(REG_REF_LEN, (1).to_bytes(4, "little"))
@@ -46,7 +45,6 @@ async def test_query_bubbles(dut):
     start_dut(dut)
     axil     = AxiLiteMaster(AxiLiteBus.from_prefix(dut, "aximl"),      dut.clk)
     axis_in  = AxiStreamSource(AxiStreamBus.from_prefix(dut, "axis_in"), dut.clk)
-    axis_out = AxiStreamSink  (AxiStreamBus.from_prefix(dut, "axis_out"), dut.clk)
 
     await reset_dut(dut)
     await reset_core(axil)

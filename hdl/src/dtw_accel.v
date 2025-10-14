@@ -84,16 +84,7 @@ module dtw_accel #(
     input  wire                             SRC_AXIS_tvalid,
     output wire                             SRC_AXIS_tready,
     input  wire                             SRC_AXIS_tlast,
-    input  wire [AXIS_DATA_WIDTH - 1:0]     SRC_AXIS_tdata,
-
-    // Output AXI Stream
-    input  wire                             SINK_AXIS_clk,
-    input  wire                             SINK_AXIS_rst,
-    output wire                             SINK_AXIS_tuser,
-    output wire                             SINK_AXIS_tvalid,
-    input  wire                             SINK_AXIS_tready,
-    output wire                             SINK_AXIS_tlast,
-    output wire [AXIS_DATA_WIDTH - 1:0]     SINK_AXIS_tdata
+    input  wire [AXIS_DATA_WIDTH - 1:0]     SRC_AXIS_tdata
 );
 
 /* ===============================
@@ -107,7 +98,6 @@ localparam  REG_VERSION      = 3;
 localparam  REG_KEY          = 4;
 localparam  REG_REF_ADDR     = 5;
 localparam  REG_REF_DIN      = 6;
-localparam  REG_REF_DOUT     = 7;
 localparam  REG_CYCLE_CNT    = 8;
 localparam  REG_CORE_REF_ADDR= 9;
 localparam  REG_NQUERY       = 10;
@@ -182,35 +172,9 @@ wire                            w_src_fifo_r_stb;
 wire                            w_src_fifo_empty;
 wire                            w_src_fifo_not_empty;
 
-// Sink FIFO
-wire  [FIFO_DATA_WIDTH - 1:0]   w_sink_fifo_w_data;
-wire                            w_sink_fifo_w_stb;
-wire                            w_sink_fifo_full;
-wire                            w_sink_fifo_not_full;
-wire                            w_sink_fifo_r_last;
-
-wire  [FIFO_DATA_WIDTH - 1:0]   w_sink_fifo_r_data;
-wire                            w_sink_fifo_r_stb;
-wire                            w_sink_fifo_empty;
-wire                            w_sink_fifo_not_empty;
-
-// --- Tie-offs for removed sink path ---
-
-// AXIS sink interface (we don't produce anything)
-assign SINK_AXIS_tuser  = 1'b0;
-assign SINK_AXIS_tvalid = 1'b0;
-assign SINK_AXIS_tlast  = 1'b0;
-assign SINK_AXIS_tdata  = {AXIS_DATA_WIDTH{1'b0}};
-
-assign w_sink_fifo_empty = 1'b1; // nothing to drain → "empty"
-assign w_sink_fifo_full  = 1'b0; // and definitely not "full"
-
-// If you expose w_dbg_ref_dout but no longer drive it anywhere, tie it off too
-assign w_dbg_ref_dout    = {DATA_WIDTH{1'b0}};
-
 // dtw core debug
 wire  [2:0]                     w_dtw_core_state;
-wire  [REFMEM_PTR_WIDTH-1:0]   w_dtw_core_addr_ref;
+wire  [REFMEM_PTR_WIDTH-1:0]    w_dtw_core_addr_ref;
 wire  [31:0]                    w_dtw_core_nquery;
 wire  [31:0]                    w_dtw_core_curr_qid;
 
@@ -358,11 +322,8 @@ assign w_status[0]                      = w_dtw_core_busy;
 assign w_status[1]                      = w_dtw_core_load_done;
 assign w_status[2]                      = w_src_fifo_empty;
 assign w_status[3]                      = w_src_fifo_full;
-assign w_status[4]                      = w_sink_fifo_empty;
-assign w_status[5]                      = w_sink_fifo_full;
+assign w_status[5:4]                    = 2'b00;
 assign w_status[8:6]                    = w_dtw_core_state;
-// assign w_status[23:9]                   = w_dtw_core_addrW_ref;
-// assign w_status[31:24]                  = w_dtw_core_addrR_ref[7:0];
 assign w_status[31:9]                   = 0;
 
 /* ===============================
@@ -401,8 +362,6 @@ always @ (posedge S_AXI_clk) begin
             end
             REG_REF_DIN: begin
                 r_dbg_ref_din <= w_reg_in_data;
-            end
-            REG_REF_DOUT: begin
             end
             REG_CYCLE_CNT: begin
             end
@@ -447,9 +406,6 @@ always @ (posedge S_AXI_clk) begin
             end
             REG_REF_DIN: begin
                 r_reg_out_data <= r_dbg_ref_din;
-            end
-            REG_REF_DOUT: begin
-                r_reg_out_data <= w_dbg_ref_dout;
             end
             REG_CYCLE_CNT: begin
                 r_reg_out_data <= w_dtw_core_cycle_counter;

@@ -24,7 +24,6 @@ sources = [
   src_path / "axis_2_fifo.v",
   src_path / "fifo_2_axis.v",
   src_path / "dtw_core_pe.v",
-  src_path / "dtw_core_ref_mem.v",
   src_path / "dtw_core_datapath.v",
   src_path / "dtw_core.v",
   src_path / "dtw_accel.v",

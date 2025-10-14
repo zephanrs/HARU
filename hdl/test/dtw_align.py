@@ -2,7 +2,7 @@ import cocotb
 from cocotb.triggers import with_timeout
 from cocotbext.axi import (
   AxiLiteBus, AxiLiteMaster,
-  AxiStreamBus, AxiStreamSource, AxiStreamSink, AxiStreamFrame,
+  AxiStreamBus, AxiStreamSource, AxiStreamFrame,
 )
 from test_helpers import *
 import random
@@ -39,12 +39,11 @@ async def setup(dut):
 
   axil     = AxiLiteMaster(AxiLiteBus.from_prefix(dut, "aximl"),      dut.clk)
   axis_in  = AxiStreamSource(AxiStreamBus.from_prefix(dut, "axis_in"), dut.clk)
-  axis_out = AxiStreamSink  (AxiStreamBus.from_prefix(dut, "axis_out"),dut.clk)
 
   await reset_dut(dut)
   await reset_core(axil)
 
-  return axil, axis_in, axis_out
+  return axil, axis_in
 
 
 async def load_query(dut, axil, axis_in, qid, samples, ref_len):
@@ -82,7 +81,7 @@ async def read_status_regs(axil):
 
 @cocotb.test()
 async def test_align_identity(dut):
-  axil, axis_in, axis_out = await setup(dut)
+  axil, axis_in = await setup(dut)
 
   ref = [((i+10) & 0xFFFF) for i in range(SQG_SIZE)]
   qid = 7
@@ -98,7 +97,7 @@ async def test_align_identity(dut):
 
 @cocotb.test()
 async def test_align_noisy(dut):
-  axil, axis_in, axis_out = await setup(dut)
+  axil, axis_in = await setup(dut)
 
   base = [(i & 0xFFFF) for i in range(SQG_SIZE)]
   qid = 33
@@ -118,7 +117,7 @@ async def test_align_noisy(dut):
 
 @cocotb.test()
 async def test_align_misaligned(dut):
-  axil, axis_in, axis_out = await setup(dut)
+  axil, axis_in = await setup(dut)
 
   ref = [(i & 0xFFFF) for i in range(SQG_SIZE)]
   shift = 16
@@ -137,7 +136,7 @@ async def test_align_misaligned(dut):
 
 # @cocotb.test()
 # async def test_align_random_cases(dut):
-#   axil, axis_in, axis_out = await setup(dut)
+#   axil, axis_in = await setup(dut)
 
 #   rng = random.Random(2027)
 #   for k in range(4):
@@ -172,7 +171,7 @@ async def test_align_misaligned(dut):
 
 @cocotb.test()
 async def test_align_latency_insensitive(dut):
-    axil, axis_in, axis_out = await setup(dut)
+    axil, axis_in = await setup(dut)
 
     rng = random.Random(0xB0BB1E)
     qid = 0xCAFE
@@ -200,7 +199,7 @@ async def test_align_latency_insensitive(dut):
 
 @cocotb.test()
 async def test_edge_alignment(dut):
-    axil, axis_in, axis_out = await setup(dut)
+    axil, axis_in = await setup(dut)
 
     qid = 0xBEEF
     query = [0 for _ in range(SQG_SIZE)]

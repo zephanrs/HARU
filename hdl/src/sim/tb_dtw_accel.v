@@ -26,7 +26,6 @@ SOFTWARE. */
 `timescale 1ns/1ps
 
 `define AXIS_IN_TUSER_EN
-`define AXIS_OUT_TUSER_EN
 
 module tb_dtw_accel #(
     parameter ADDR_WIDTH          = 32,
@@ -71,15 +70,7 @@ module tb_dtw_accel #(
     input                               axis_in_tvalid,
     output                              axis_in_tready,
     input                               axis_in_tlast,
-    input       [AXIS_DATA_WIDTH - 1:0] axis_in_tdata,
-
-    `ifdef AXIS_OUT_TUSER_EN
-    output                              axis_out_tuser,
-    `endif
-    output                              axis_out_tvalid,
-    input                               axis_out_tready,
-    output                              axis_out_tlast,
-    output      [AXIS_DATA_WIDTH - 1:0] axis_out_tdata
+    input       [AXIS_DATA_WIDTH - 1:0] axis_in_tdata
 );
 
 /* ===============================
@@ -138,20 +129,7 @@ dtw_accel #(
     .SRC_AXIS_tvalid (axis_in_tvalid),
     .SRC_AXIS_tready (axis_in_tready),
     .SRC_AXIS_tlast  (axis_in_tlast),
-    .SRC_AXIS_tdata  (axis_in_tdata),
-
-    // Output AXI Stream
-    .SINK_AXIS_clk   (clk),
-    .SINK_AXIS_rst   (r_rst),
-`ifdef AXIS_IN_TUSER_EN
-    .SINK_AXIS_tuser (axis_out_tuser),
-`else
-    .SINK_AXIS_tuser (1'b0),
-`endif
-    .SINK_AXIS_tvalid(axis_out_tvalid),
-    .SINK_AXIS_tready(axis_out_tready),
-    .SINK_AXIS_tlast (axis_out_tlast),
-    .SINK_AXIS_tdata (axis_out_tdata)
+    .SRC_AXIS_tdata  (axis_in_tdata)
 );
 
 initial begin
