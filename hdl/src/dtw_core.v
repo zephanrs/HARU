@@ -98,7 +98,7 @@ dtw_core_datapath #(
     .last           (dp_last),
     .load           (dp_load),
     .stream_in      (src_fifo_data[15:0]),
-    .minval         (curr_score),
+    .minval         (curr_score[15:0]),
     .minidx         (curr_idx),
     .ref_count      (curr_count)
 );
@@ -107,8 +107,9 @@ dtw_core_datapath #(
  * asynchronous logic
  * =============================== */
 
-assign done = (counter == (SQG_SIZE - 1)); // counter[swidth]
+assign done = (counter == swidth'(SQG_SIZE - 1));
 assign load_done = (curr_state == DTW_RUN); 
+assign curr_score[31:16] = 0;
 
 /* ===============================
  * synchronous logic
