@@ -113,6 +113,12 @@ localparam  REG_CORE_REF_ADDR= 9;
 localparam  REG_NQUERY       = 10;
 localparam  REG_CURR_QID     = 11;
 
+// DTW registers
+localparam  REG_QID          = 12;
+localparam  REG_COUNT        = 13;
+localparam  REG_IDX          = 14;
+localparam  REG_SCORE        = 15;     
+
 localparam  integer ADDR_LSB = (DATA_WIDTH / 32) + 1;
 localparam  integer ADDR_BITS = 3;
 
@@ -147,6 +153,12 @@ reg   [DATA_WIDTH - 1 : 0]      r_dbg_ref_addr;
 reg   [DATA_WIDTH - 1 : 0]      r_dbg_ref_din;
 wire  [DATA_WIDTH - 1 : 0]      w_dbg_ref_dout;
 wire  [DATA_WIDTH - 1 : 0]      w_dtw_core_cycle_counter;
+
+// new DTW accel
+wire  [31:0]                    w_dtw_core_qid;
+wire  [31:0]                    w_dtw_core_idx;
+wire  [DATA_WIDTH - 1 : 0]      w_dtw_core_score;
+
 
 // Control Register bits
 wire                            w_dtw_core_rst;
@@ -309,7 +321,11 @@ dtw_core #(
 
     .dbg_cycle_counter  (w_dtw_core_cycle_counter),
     .dbg_nquery         (w_dtw_core_nquery),
-    .dbg_curr_qid       (w_dtw_core_curr_qid)
+    .dbg_curr_qid       (w_dtw_core_curr_qid),
+
+    .curr_qid           (w_dtw_core_qid),
+    .curr_idx           (w_dtw_core_idx),
+    .curr_score         (w_dtw_core_score)
 );
 
 fifo #(
@@ -419,6 +435,12 @@ always @ (posedge S_AXI_clk) begin
             end
             REG_CURR_QID: begin
             end
+            REG_QID: begin
+            end
+            REG_IDX: begin
+            end
+            REG_SCORE: begin
+            end
             default: begin // unknown address
                 $display ("Unknown address: 0x%h", w_reg_address);
                 r_reg_invalid_addr <= 1;
@@ -463,6 +485,15 @@ always @ (posedge S_AXI_clk) begin
             end
             REG_CURR_QID: begin
                 r_reg_out_data <= w_dtw_core_curr_qid;
+            end
+            REG_QID: begin
+                r_reg_out_data <= w_dtw_core_qid;
+            end
+            REG_IDX: begin
+                r_reg_out_data <= w_dtw_core_idx;
+            end
+            REG_SCORE: begin
+                r_reg_out_data <= w_dtw_core_score;
             end
             default: begin // Unknown address
                 r_reg_out_data      <= 32'h00;

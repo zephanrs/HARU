@@ -5,11 +5,22 @@ from cocotb.triggers import RisingEdge, FallingEdge
 
 CLK_NS = 10
 
-REG_CONTROL = 0x00
-REG_STATUS  = 0x04
-REG_REF_LEN = 0x08
-REG_VERSION = 0x0C
-REG_KEY     = 0x10
+REG_CONTROL      = 0x00
+REG_STATUS       = 0x04
+REG_REF_LEN      = 0x08
+REG_VERSION      = 0x0C
+REG_KEY          = 0x10
+REG_REF_ADDR     = 0x14
+REG_REF_DIN      = 0x18
+REG_REF_DOUT     = 0x1C
+REG_CYCLE_CNT    = 0x20
+REG_CORE_REF_ADDR= 0x24
+REG_NQUERY       = 0x28
+REG_CURR_QID     = 0x2C
+REG_QID          = 0x30
+REG_COUNT        = 0x34
+REG_IDX          = 0x38
+REG_SCORE        = 0x3c
 
 CR_RESET = 0
 CR_RS    = 1

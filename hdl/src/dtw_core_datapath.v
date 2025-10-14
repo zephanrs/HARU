@@ -39,12 +39,9 @@ module dtw_core_datapath #(
     input   wire [width-1:0]    Rword,          // Reference sample
     input   wire [31:0]         ref_len,        // Reference length
     output  wire [width-1:0]    minval,         // Minimum value
-    output  wire [31:0]         position,       // Position of minimum value
+    output  wire [31:0]         minidx,        // Position of minimum value
     output  wire                done,           // Query search done
-    output  wire                load_done,
-
-    // debug
-    output  wire [31:0]         dbg_cycle_counter
+    output  wire                load_done
 );
 
 /* ===============================
@@ -70,7 +67,7 @@ reg     [SQG_SIZE-1:0]  running_d;
 reg     [SQG_SIZE-1:0]  last_d;
 
 reg     [width-1:0]     Minval;
-reg     [31:0]          Minpos;
+reg     [31:0]          Minidx;
 
 /* ===============================
  * submodules
@@ -125,7 +122,7 @@ endgenerate
  * asynchronous logic
  * =============================== */
 assign minval     = Minval;
-assign position   = Minpos;
+assign minidx     = Minidx;
 assign done       = (cycle_counter >= ref_len);
 assign dbg_cycle_counter = cycle_counter;
 assign load_done  = squiggle_buffaddress[8];
@@ -238,10 +235,10 @@ end
 always @(posedge clk) begin
     if (rst) begin
         Minval <= -1;
-        Minpos <= 0;
+        Minidx <= 0;
     end else if (last_d[SQG_SIZE-1] && running_d[SQG_SIZE-1]) begin
         Minval <= DTW_curr[SQG_SIZE-1];
-        Minpos <= cycle_counter;
+        Minidx <= 0;
     end
 end
 

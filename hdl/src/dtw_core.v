@@ -66,8 +66,16 @@ module dtw_core #(
 
     output  wire [31:0]             dbg_cycle_counter,
     output  wire [31:0]             dbg_nquery,
-    output  wire [31:0]             dbg_curr_qid
+    output  wire [31:0]             dbg_curr_qid,
+
+    // new dtw signals
+    output  reg  [31:0]             curr_qid,
+    output  wire [31:0]             curr_idx,
+    output  wire [31:0]             curr_score
 );
+
+// temp stuff to delete
+assign dbg_cycle_counter = 0;
 
 /* ===============================
  * local parameters
@@ -107,9 +115,6 @@ reg                 dp_last;
 reg                 dp_load;            // dp core load enable
 wire                dp_done;            // dp core done
 wire                dp_load_done;       // dp core load done
-reg  [31:0]         curr_qid;           // Current query id
-wire [WIDTH-1:0]    curr_minval;        // Current minimum value
-wire [31:0]         curr_position;      // Current best match position
 
 // FSM state
 reg [2:0] r_state;
@@ -135,13 +140,10 @@ dtw_core_datapath #(
     .Input_squiggle (src_fifo_data[15:0]),
     .Rword          (src_fifo_data[15:0]),
     .ref_len        (ref_len),
-    .minval         (curr_minval),
-    .position       (curr_position),
+    .minval         (curr_score),
+    .minidx         (curr_idx),
     .done           (dp_done),
-    .load_done      (dp_load_done),
-
-    // debug
-    .dbg_cycle_counter (dbg_cycle_counter)
+    .load_done      (dp_load_done)
 );
 
 /* ===============================
@@ -180,9 +182,7 @@ always @(posedge clk) begin
             if (dp_done)
                 r_state <= DTW_DONE;
         end
-        DTW_DONE:
-            if (!sink_fifo_full && stall_counter >= 2'h3) begin
-                r_state <= IDLE;
+        DTW_DONE: begin
         end
         default: r_state <= IDLE;
         endcase
@@ -269,11 +269,11 @@ always @(posedge clk) begin
             end else if (stall_counter == 1) begin
                 sink_fifo_last  <= 0;
                 sink_fifo_wren  <= 1;
-                sink_fifo_data  <= curr_position;
+                sink_fifo_data  <= curr_idx;
             end else if (stall_counter == 2) begin
                 sink_fifo_last  <= 0;
                 sink_fifo_wren  <= 1;
-                sink_fifo_data  <= {16'b0, curr_minval};
+                sink_fifo_data  <= {16'b0, curr_score};
             end else begin
                 sink_fifo_last  <= 1;
                 sink_fifo_wren  <= 0;

@@ -39,4 +39,4 @@ jobs:
       - name: Run pytest (cocotb simulations)
         timeout-minutes: 10
         run: |
-          python -m pytest -c hdl/pytest.ini hdl
+          python -m pytest -c hdl/pytest.ini hdl --tb=no
