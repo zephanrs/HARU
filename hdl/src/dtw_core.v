@@ -103,6 +103,7 @@ reg                 done;
 // DTW datapath signals
 reg                 dp_rst;             // dp core reset
 reg                 dp_running;         // dp core run enable
+reg                 dp_last;
 reg                 dp_load;            // dp core load enable
 wire                dp_done;            // dp core done
 wire                dp_load_done;       // dp core load done
@@ -129,6 +130,7 @@ dtw_core_datapath #(
     .clk            (clk),
     .rst            (dp_rst),
     .running        (dp_running),
+    .last           (dp_last),
     .load           (dp_load),
     .Input_squiggle (src_fifo_data[15:0]),
     .Rword          (src_fifo_data[15:0]),
@@ -197,6 +199,7 @@ always @(posedge clk) begin
         addr_ref                <= 0;
         dp_rst                  <= 1;
         dp_running              <= 0;
+        dp_last                 <= 1;
         dp_load                 <= 0;
         stall_counter           <= 0;
         r_src_fifo_clear        <= 1;
@@ -238,11 +241,14 @@ always @(posedge clk) begin
         src_fifo_rden           <= 1;
 
         dp_running              <= !src_fifo_empty;
-        src_fifo_rden           <= !done;
 
-        if (!done) begin // loading ref
-            if (!src_fifo_empty)
-                counter         <= counter + 1;
+        if (!done && !src_fifo_empty) begin
+            counter             <= counter + 1;
+            dp_last             <= 0;
+        end else if (done) begin
+            if (!src_fifo_empty) begin
+                dp_last         <= 1;
+            end
         end
 
     end

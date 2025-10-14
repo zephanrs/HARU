@@ -34,9 +34,11 @@ module dtw_core_pe #(
 
     input   wire [width-1:0]    x,          // squiggle sample
     input   wire [width-1:0]    y,          // reference sample
+
     input   wire [width-1:0]    N,          // north dependancy
     input   wire [width-1:0]    W,          // west dependancy
     input   wire [width-1:0]    NW,         // northwest dependancy
+    
     output  wire [width-1:0]    DTWc,       // DTW cost
     output  reg  [width-1:0]    yp          // previous y sample
 );

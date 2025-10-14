@@ -32,8 +32,8 @@ module dtw_core_datapath #(
     input   wire                clk,
     input   wire                rst,
     input   wire                running,        // Run enable
+    input   wire                last,           // last reference
     input   wire                load,           // Load enable
-
 
     input   wire [width-1:0]    Input_squiggle, // Squiggle sample
     input   wire [width-1:0]    Rword,          // Reference sample
@@ -65,7 +65,9 @@ wire    [width-1:0]     p_Rword         [0:SQG_SIZE-1];
 
 reg     [width-1:0]     DTW_prev        [0:SQG_SIZE-1];
 reg     [width-1:0]     DTW_pprev       [0:SQG_SIZE-1];
-reg     [SQG_SIZE:0]    running_d;
+
+reg     [SQG_SIZE-1:0]  running_d;
+reg     [SQG_SIZE-1:0]  last_d;
 
 reg     [width-1:0]     Minval;
 reg     [31:0]          Minpos;
@@ -75,7 +77,7 @@ reg     [31:0]          Minpos;
  * =============================== */
 wire [width-1:0] nw;
 // nw activation
-assign nw = (running_d[0] && !running_d[1]) ? 0 : -1; // now unsafe
+assign nw = (!last_d[0] && last_d[1]) ? 0 : -1;
 // First PE
 dtw_core_pe #(
     .width(width)
@@ -94,6 +96,9 @@ dtw_core_pe #(
 
 wire runningd0 = running_d[0];
 wire runningdl = running_d[SQG_SIZE-1];
+
+wire lastd0 = last_d[0];
+wire lastdl = last_d[SQG_SIZE-1];
 
 // Other PEs
 genvar m;
@@ -131,13 +136,29 @@ assign load_done  = squiggle_buffaddress[8];
 // shift PE running status
 always @(posedge clk) begin
     if(rst) begin
-        for (k = 0; k <= SQG_SIZE; k = k + 1) begin
+        for (k = 0; k < SQG_SIZE; k = k + 1) begin
             running_d[k] <= 0;
         end
     end else begin
         running_d[0] <= running;
-        for (k = 1; k <= SQG_SIZE; k = k + 1) begin
+        for (k = 1; k < SQG_SIZE; k = k + 1) begin
             running_d[k] <= running_d[k-1];
+        end
+    end
+end
+
+// shift PE last status
+always @(posedge clk) begin
+    if(rst) begin
+        for (k = 0; k < SQG_SIZE; k = k + 1) begin
+            last_d[k] <= 1;
+        end
+    end else begin
+        if (running)
+            last_d[0] <= last;
+        for (k = 1; k < SQG_SIZE; k = k + 1) begin
+            if (running_d[k-1])
+                last_d[k] <= last_d[k-1];
         end
     end
 end
@@ -218,7 +239,7 @@ always @(posedge clk) begin
     if (rst) begin
         Minval <= -1;
         Minpos <= 0;
-    end else if (cycle_counter == ref_len - 1) begin
+    end else if (last_d[SQG_SIZE-1] && running_d[SQG_SIZE-1]) begin
         Minval <= DTW_curr[SQG_SIZE-1];
         Minpos <= cycle_counter;
     end
