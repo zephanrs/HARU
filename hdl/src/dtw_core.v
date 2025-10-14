@@ -45,10 +45,10 @@ module dtw_core #(
     output  reg  [1:0]              curr_state,
 
     // src fifo signals
-    output  reg                     src_fifo_clear,     // src fifo Clear signal
-    output  reg                     src_fifo_rden,      // src fifo Read enable
-    input   wire                    src_fifo_empty,     // src fifo Empty
-    input   wire [31:0]             src_fifo_data,      // src fifo Data
+    input   wire                    src_axis_tvalid,
+    output  reg                     src_axis_tready,
+    input   wire                    src_axis_tlast,
+    input   wire [AXIS_WIDTH-1:0]   src_axis_tdata,
 
     // output signals
     output  reg  [31:0]             curr_qid,
@@ -97,7 +97,7 @@ dtw_core_datapath #(
     .running        (dp_running),
     .last           (dp_last),
     .load           (dp_load),
-    .stream_in      (src_fifo_data[15:0]),
+    .stream_in      (src_axis_tdata[15:0]),
     .minval         (curr_score[15:0]),
     .minidx         (curr_idx),
     .ref_count      (curr_count)
@@ -122,11 +122,11 @@ always @(posedge clk) begin
     end else begin
         case (curr_state)
             DTW_Q_INIT: begin
-                if (!src_fifo_empty)
+                if (src_axis_tvalid && src_axis_tready)
                     curr_state <= DTW_Q_LOAD;
             end
             DTW_Q_LOAD: begin
-                if (done && !src_fifo_empty)
+                if (done && src_axis_tvalid)
                     curr_state <= DTW_RUN;
             end
             default: begin end
@@ -138,32 +138,30 @@ end
 always @(posedge clk) begin
     if (rst) begin
         busy                    <= 0;
-        src_fifo_rden           <= 0;
+        src_axis_tready         <= 0;
         dp_running              <= 0;
         dp_last                 <= 1;
         dp_load                 <= 0;
-        src_fifo_clear          <= 1;
         curr_qid                <= 0;
         counter                 <= 0;
     end else case (curr_state)
         DTW_Q_INIT: begin
-            src_fifo_rden           <= 1;
-            src_fifo_clear          <= 0;
-            curr_qid                <= src_fifo_data;
+            src_axis_tready         <= 1;
+            curr_qid                <= src_axis_tdata;
         end
         DTW_Q_LOAD: begin
             busy                    <= 1;
-            dp_load                 <= !src_fifo_empty;
+            dp_load                 <= src_axis_tvalid;
 
-            if (!src_fifo_empty)
+            if (src_axis_tvalid)
                 counter             <= done ? 0 : counter + 1;
         end
         DTW_RUN: begin
             dp_load                 <= 0;
-            dp_running              <= !src_fifo_empty;
+            dp_running              <= src_axis_tvalid;
             dp_last                 <= done;
 
-            if (!src_fifo_empty) begin
+            if (src_axis_tvalid) begin
                 counter             <= counter + 1;
             end
         end

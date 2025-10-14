@@ -63,20 +63,26 @@ async def read_status_regs(axil, expected_count=1, timeout_ns=400_000):
   score   = int.from_bytes(score_bytes.data, "little") & 0xFFFF
   return got_qid, idx, score
 
-def generate_random_reference(rng, query):
+def generate_random_reference(rng, query, ref_len=256):
+  mu = float(SQG_SIZE) / float(ref_len)
+  p1 = 0.5
+  p2 = max(0.0, min(0.5, (mu - 0.5) / 2.0))
+  p0 = 0.5 - p2
+
   ref = []
   r = 0
-  for _ in range(SQG_SIZE):
+  for _ in range(ref_len):
     x = query[r]
     p = rng.random()
-    if p < 0.25:
+    if p < p2:
       r = min(r + 2, SQG_SIZE - 1)
-    elif p < 0.75:
+    elif p < (p2 + p1):
       r = min(r + 1, SQG_SIZE - 1)
     y = x + rng.randint(-4, 4)
     if y < 0:
       y = 0
     ref.append(y & 0xFFFF)
+
   return ref
 
 @cocotb.test()
@@ -248,3 +254,81 @@ async def test_random_multiple_query(dut):
     assert got_qid == qid
     assert idx == best_idx
     assert score == best_score
+
+@cocotb.test()
+async def test_multiple_query_varlen(dut):
+  axil, axis_in = await setup(dut)
+  rng = random.Random(0xA11CE + 1)
+
+  async def random_wait():
+    n = rng.randrange(0, 51)
+    for _ in range(n):
+      await cocotb.triggers.RisingEdge(dut.clk)
+
+  for qn in range(4):
+    qid = 0xB000 + qn
+
+    x = rng.randrange(0, 1024)
+    query = []
+    for _ in range(SQG_SIZE):
+      x = max(0, min(0xFFFF, x + rng.randint(-4, 4)))
+      query.append(x & 0xFFFF)
+
+    await load_query(dut, axil, axis_in, qid, query)
+    await random_wait()
+
+    best_score = 0xFFFF
+    best_idx = -1
+
+    for k in range(2):
+      ref_len = rng.randrange(240, 281)
+      ref = generate_random_reference(rng, query, ref_len=ref_len)
+      exp, _ = dtw(ref, query)
+      if exp < best_score:
+        best_score = exp
+        best_idx = k
+      frame = AxiStreamFrame(pack_words(ref))
+      await axis_in.send(frame)
+      if k == 0:
+        await random_wait()
+
+    got_qid, idx, score = await read_status_regs(axil, expected_count=2, timeout_ns=100_000)
+    assert got_qid == qid
+    assert idx == best_idx
+    assert score == best_score
+
+@cocotb.test()
+async def test_align_latency_varlen(dut):
+  axil, axis_in = await setup(dut)
+  rng = random.Random(0xFEED + 1)
+
+  query = [(i + 10) & 0xFFFF for i in range(SQG_SIZE)]
+  qid = 0x9101
+
+  def random_bubble_gen():
+    while True:
+      yield False
+      for _ in range(rng.randrange(0, 3)):
+        yield True
+
+  axis_in.set_pause_generator(random_bubble_gen())
+  await load_query(dut, axil, axis_in, qid, query)
+
+  best_score = 0xFFFF
+  best_idx = -1
+
+  for k in range(4):
+    ref_len = rng.randrange(240, 281)
+    ref = generate_random_reference(rng, query, ref_len=ref_len)
+    exp, _ = dtw(ref, query)
+    if exp < best_score:
+      best_score = exp
+      best_idx = k
+    axis_in.set_pause_generator(random_bubble_gen())
+    frame = AxiStreamFrame(pack_words(ref))
+    await axis_in.send(frame)
+
+  got_qid, idx, score = await read_status_regs(axil, expected_count=4, timeout_ns=100_000)
+  assert got_qid == qid
+  assert idx == best_idx
+  assert score == best_score

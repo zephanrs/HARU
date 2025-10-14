@@ -33,8 +33,9 @@ async def test_load_query(dut):
   payload = pack_words([qid] + samples)
   await axis_in.send(AxiStreamFrame(payload))
 
-  for _ in range(1024):
-    await RisingEdge(dut.clk)
+  dp = get_dp(dut)
+  if int(dp.s_load_done.value) == 0:
+    await cocotb.triggers.RisingEdge(dp.s_load_done)
 
   await assert_s_buff_equals(dut, samples)
   assert int(dut.dut.dc.curr_qid.value) == qid

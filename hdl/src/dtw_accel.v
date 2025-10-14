@@ -210,39 +210,6 @@ axi_lite_slave #(
     .i_reg_out_data     (r_reg_out_data)
 );
 
-
-// AXIS src -> src FIFO
-axis_2_fifo_adapter #(
-    .AXIS_DATA_WIDTH    (AXIS_DATA_WIDTH)
-) a2fa (
-    .i_axis_tuser       (SRC_AXIS_tuser),
-    .i_axis_tvalid      (SRC_AXIS_tvalid),
-    .o_axis_tready      (SRC_AXIS_tready),
-    .i_axis_tlast       (SRC_AXIS_tlast),
-    .i_axis_tdata       (SRC_AXIS_tdata),
-
-    .o_fifo_data        (w_src_fifo_w_data),
-    .o_fifo_w_stb       (w_src_fifo_w_stb),
-    .i_fifo_not_full    (w_src_fifo_not_full)
-);
-
-fifo #(
-    .DEPTH              (FIFO_DEPTH),
-    .WIDTH              (FIFO_DATA_WIDTH)
-) src_fifo (
-    .clk                (SRC_AXIS_clk),
-    .rst                (w_axis_rst | w_src_fifo_clear),
-
-    .i_fifo_w_stb       (w_src_fifo_w_stb),
-    .i_fifo_w_data      (w_src_fifo_w_data),
-    .o_fifo_full        (w_src_fifo_full),
-    .o_fifo_not_full    (w_src_fifo_not_full),
-
-    .i_fifo_r_stb       (w_src_fifo_r_stb),
-    .o_fifo_r_data      (w_src_fifo_r_data),
-    .o_fifo_empty       (w_src_fifo_empty)
-);
-
 // DTW core
 dtw_core #(
     .WIDTH              (16),
@@ -254,10 +221,10 @@ dtw_core #(
     .busy               (w_dtw_core_busy),
     .load_done          (w_dtw_core_load_done),
 
-    .src_fifo_clear     (w_src_fifo_clear),
-    .src_fifo_rden      (w_src_fifo_r_stb),
-    .src_fifo_empty     (w_src_fifo_empty),
-    .src_fifo_data      (w_src_fifo_r_data),
+    .src_axis_tvalid    (SRC_AXIS_tvalid),
+    .src_axis_tready    (SRC_AXIS_tready),
+    .src_axis_tlast     (SRC_AXIS_tlast),
+    .src_axis_tdata     (SRC_AXIS_tdata),
 
     .curr_state         (w_dtw_core_state),
 
