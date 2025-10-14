@@ -242,8 +242,10 @@ always @(posedge clk) begin
         Minidx <= 0;
         Ref_count <= 0;
     end else if (last_d[SQG_SIZE-1] && running_d[SQG_SIZE-1]) begin
-        Minval <= DTW_curr[SQG_SIZE-1];
-        Minidx <= 0;
+        if (DTW_curr[SQG_SIZE-1] < Minval) begin
+            Minval <= DTW_curr[SQG_SIZE-1];
+            Minidx <= Ref_count;
+        end
         Ref_count <= Ref_count + 1;
     end
 end

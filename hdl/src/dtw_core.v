@@ -227,16 +227,11 @@ always @(posedge clk) begin
         src_fifo_rden           <= 1;
 
         dp_running              <= !src_fifo_empty;
+        dp_last                 <= done;
 
         if (!src_fifo_empty) begin
             counter             <= counter + 1;
-            dp_last             <= 0;
-        end else if (done) begin
-            if (!src_fifo_empty) begin
-                dp_last         <= 1;
-            end
         end
-
     end
     default: begin
         busy                    <= 0;
