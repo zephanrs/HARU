@@ -20,9 +20,6 @@ build_dir = proj_path / "build"
 sources = [
   src_path / "axi_defines.v",
   src_path / "axi_lite_slave.v",
-  src_path / "fifo.v",
-  src_path / "axis_2_fifo_adapter.v",
-  src_path / "fifo_2_axis_adapter.v",
   src_path / "dtw_core_pe.v",
   src_path / "dtw_core_datapath.v",
   src_path / "dtw_core.v",
