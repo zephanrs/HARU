@@ -1,5 +1,6 @@
+# dtw_query.py
 import cocotb
-from cocotb.triggers import RisingEdge, with_timeout
+from cocotb.triggers import RisingEdge
 from cocotbext.axi import (
   AxiLiteBus, AxiLiteMaster,
   AxiStreamBus, AxiStreamSource, AxiStreamFrame,
@@ -17,7 +18,6 @@ async def assert_s_buff_equals(dut, expected):
   for i, exp in enumerate(expected):
     got = dp.s_buff[i].value.integer
     assert got == (exp & 0xFFFF), f"s_buff[{i}]={got} != {(exp & 0xFFFF)}"
-  
 
 @cocotb.test()
 async def test_load_query(dut):
@@ -25,53 +25,49 @@ async def test_load_query(dut):
   axil     = AxiLiteMaster(AxiLiteBus.from_prefix(dut, "aximl"),      dut.clk)
   axis_in  = AxiStreamSource(AxiStreamBus.from_prefix(dut, "axis_in"), dut.clk)
 
-  await reset_dut(dut); await reset_core(axil)
-  await axil.write(REG_REF_LEN, (1).to_bytes(4, "little"))
-
-  await enter_query_load_mode(axil)
+  await reset_dut(dut)
+  await reset_core(axil, dut)
 
   qid = 0x77
   samples = [(i & 0xFFFF) for i in range(SQG_SIZE)]
   payload = pack_words([qid] + samples)
   await axis_in.send(AxiStreamFrame(payload))
 
-  await with_timeout(wait_state(axil, dut, STATE_RUN), 300_000, "ns")
+  for _ in range(1024):
+    await RisingEdge(dut.clk)
 
   await assert_s_buff_equals(dut, samples)
   assert int(dut.dut.dc.curr_qid.value) == qid
 
 @cocotb.test()
 async def test_query_bubbles(dut):
-    start_dut(dut)
-    axil     = AxiLiteMaster(AxiLiteBus.from_prefix(dut, "aximl"),      dut.clk)
-    axis_in  = AxiStreamSource(AxiStreamBus.from_prefix(dut, "axis_in"), dut.clk)
+  start_dut(dut)
+  axil     = AxiLiteMaster(AxiLiteBus.from_prefix(dut, "aximl"),      dut.clk)
+  axis_in  = AxiStreamSource(AxiStreamBus.from_prefix(dut, "axis_in"), dut.clk)
 
-    await reset_dut(dut)
-    await reset_core(axil)
-    await axil.write(REG_REF_LEN, (1).to_bytes(4, "little"))
+  await reset_dut(dut)
+  await reset_core(axil, dut)
 
-    await enter_query_load_mode(axil)
+  qid = 0xA55A
+  samples = [(i & 0xFFFF) for i in range(SQG_SIZE)]
+  payload = pack_words([qid] + samples)
 
-    qid = 0xA55A
-    samples = [(i & 0xFFFF) for i in range(SQG_SIZE)]
-    payload = pack_words([qid] + samples)
+  rng = random.Random(0xb0bb1e)
 
-    rng = random.Random(0xb0bb1e)
+  def variable_idle_gen():
+    while True:
+      yield False
+      for _ in range(rng.randrange(7)):
+        yield True
 
-    def variable_idle_gen():
-        while True:
-            yield False
-            for _ in range(rng.randrange(7)):
-                yield True
+  axis_in.set_pause_generator(variable_idle_gen())
+  await axis_in.send(AxiStreamFrame(payload))
 
-    axis_in.set_pause_generator(variable_idle_gen())
-
-    await axis_in.send(AxiStreamFrame(payload))
-
-    await with_timeout(wait_state(axil, dut, STATE_RUN), 300_000, "ns")
-
-    dp = get_dp(dut)
-    for i, exp in enumerate(samples):
-        got = dp.s_buff[i].value.integer
-        assert got == (exp & 0xFFFF), f"s_buff[{i}]={got} != {(exp & 0xFFFF)}"
-    assert int(dut.dut.dc.curr_qid.value) == qid
+  dp = get_dp(dut)
+  if int(dp.s_load_done.value) == 0:
+    await cocotb.triggers.RisingEdge(dp.s_load_done)
+    
+  for i, exp in enumerate(samples):
+    got = dp.s_buff[i].value.integer
+    assert got == (exp & 0xFFFF), f"s_buff[{i}]={got} != {(exp & 0xFFFF)}"
+  assert int(dut.dut.dc.curr_qid.value) == qid

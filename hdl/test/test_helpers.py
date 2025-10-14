@@ -1,7 +1,7 @@
 # test_helpers.py
 import cocotb
 from cocotb.clock import Clock
-from cocotb.triggers import RisingEdge, FallingEdge
+from cocotb.triggers import RisingEdge
 
 CLK_NS = 10
 
@@ -9,19 +9,12 @@ REG_CONTROL      = 0x00
 REG_STATUS       = 0x04
 REG_VERSION      = 0x08
 REG_KEY          = 0x0C
-REG_REF_DIN      = 0x10
 REG_QID          = 0x14
 REG_COUNT        = 0x18
 REG_IDX          = 0x1C
 REG_SCORE        = 0x20
 
-STATE_Q_INIT = 0
-STATE_Q_LOAD = 1
-STATE_RUN    = 2
-
-CS_RST = 0
-CR_RS    = 1
-CR_MODE  = 2   # 1 = LOAD_QUERY, 0 = NORMAL (stream reference)
+CR_RST  = 0
 
 def start_dut(dut):
   cocotb.start_soon(Clock(dut.clk, CLK_NS, units="ns").start())
@@ -34,31 +27,11 @@ async def reset_dut(dut):
   for _ in range(5):
     await RisingEdge(dut.clk)
 
-async def reset_core(axil):
+async def reset_core(axil, dut):
   rd = await axil.read(REG_CONTROL, 4)
   ctrl = int.from_bytes(rd.data, "little")
-  await axil.write(REG_CONTROL, (ctrl |  (1 << CS_RST)).to_bytes(4, "little"))
-  await axil.write(REG_CONTROL, (ctrl & ~(1 << CS_RST)).to_bytes(4, "little"))
-
-async def wait_state(axil, dut, state):
-  for _ in range(100000):
-    rd = await axil.read(REG_STATUS, 4)
-    s = int.from_bytes(rd.data, "little")
-    if ((s >> 6) & 7) == state:
-      return
-    await RisingEdge(dut.clk)
-  raise AssertionError(f"timeout waiting for state={state}")
-
-async def enter_query_load_mode(axil):
-    rd = await axil.read(REG_CONTROL, 4)
-    ctrl = int.from_bytes(rd.data, "little")
-
-    ctrl |=  (1 << CR_MODE)
-    ctrl |=  (1 << CR_RS)
-    await axil.write(REG_CONTROL, ctrl.to_bytes(4, "little"))
-
-    ctrl &= ~(1 << CR_RS)
-    await axil.write(REG_CONTROL, ctrl.to_bytes(4, "little"))
+  await axil.write(REG_CONTROL, (ctrl |  (1 << CR_RST)).to_bytes(4, "little"))
+  await axil.write(REG_CONTROL, (ctrl & ~(1 << CR_RST)).to_bytes(4, "little"))
 
 def pack_words(words):
   return bytearray().join((w & 0xFFFFFFFF).to_bytes(4, "little") for w in words)
