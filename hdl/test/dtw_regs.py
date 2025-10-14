@@ -39,4 +39,4 @@ async def test_write_read_control(dut):
     rst = dut.dut.w_dtw_core_rst.value.integer
 
     assert rc == val
-    assert rst == ((val >> CR_RESET) & 1)
+    assert rst == ((val >> CS_RST) & 1)

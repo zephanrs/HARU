@@ -262,3 +262,44 @@ async def test_edge_alignment(dut):
     assert got_qid == qid
     assert idx == 0
     assert dist == exp_dist
+
+@cocotb.test()
+async def test_random_multiple_query(dut):
+  axil, axis_in = await setup(dut)
+
+  rng = random.Random(0xA11CE)
+
+  async def random_wait():
+    n = rng.randrange(0, 51)
+    for _ in range(n):
+      await cocotb.triggers.RisingEdge(dut.clk)
+
+  for qn in range(4):
+    await reset_core(axil)
+    qid = 0xA000 + qn
+    x = rng.randrange(0, 1024)
+    query = []
+    for _ in range(SQG_SIZE):
+      x = max(0, min(0xFFFF, x + rng.randint(-4, 4)))
+      query.append(x & 0xFFFF)
+
+    await load_query(dut, axil, axis_in, qid, query, len(query))
+    await random_wait()
+
+    best_score = 0xFFFF
+    best_idx = -1
+    for k in range(2):
+      ref = generate_random_reference(rng, query)
+      exp, _ = dtw(ref, query)
+      if exp < best_score:
+        best_score = exp
+        best_idx = k
+      frame = AxiStreamFrame(pack_words(ref))
+      await axis_in.send(frame)
+      if k == 0:
+        await random_wait()
+
+    got_qid, idx, score = await read_status_regs(axil, expected_count=2, timeout_ns=800_000)
+    assert got_qid == qid
+    assert idx == best_idx
+    assert score == best_score

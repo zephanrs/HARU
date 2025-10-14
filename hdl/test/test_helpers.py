@@ -26,7 +26,7 @@ STATE_Q_INIT = 0
 STATE_Q_LOAD = 1
 STATE_RUN    = 2
 
-CR_RESET = 0
+CS_RST = 0
 CR_RS    = 1
 CR_MODE  = 2   # 1 = LOAD_QUERY, 0 = NORMAL (stream reference)
 
@@ -44,8 +44,8 @@ async def reset_dut(dut):
 async def reset_core(axil):
   rd = await axil.read(REG_CONTROL, 4)
   ctrl = int.from_bytes(rd.data, "little")
-  await axil.write(REG_CONTROL, (ctrl |  (1 << CR_RESET)).to_bytes(4, "little"))
-  await axil.write(REG_CONTROL, (ctrl & ~(1 << CR_RESET)).to_bytes(4, "little"))
+  await axil.write(REG_CONTROL, (ctrl |  (1 << CS_RST)).to_bytes(4, "little"))
+  await axil.write(REG_CONTROL, (ctrl & ~(1 << CS_RST)).to_bytes(4, "little"))
 
 async def wait_state(axil, dut, state):
   for _ in range(100000):
