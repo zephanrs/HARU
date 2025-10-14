@@ -154,16 +154,12 @@ always @(posedge clk) begin
             dp_load                 <= src_axis_tvalid;
 
             if (src_axis_tvalid)
-                counter             <= done ? 0 : counter + 1;
+                counter             <= counter + 1;
         end
         DTW_RUN: begin
             dp_load                 <= 0;
             dp_running              <= src_axis_tvalid;
-            dp_last                 <= done;
-
-            if (src_axis_tvalid) begin
-                counter             <= counter + 1;
-            end
+            dp_last                 <= src_axis_tlast;
         end
         default: begin end
     endcase
