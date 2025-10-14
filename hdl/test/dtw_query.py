@@ -12,11 +12,11 @@ SQG_SIZE = 256
 def get_dp(dut):
   return dut.dut.dc.inst_dtw_core_datapath
 
-async def assert_squiggle_buffer_equals(dut, expected):
+async def assert_s_buff_equals(dut, expected):
   dp = get_dp(dut)
   for i, exp in enumerate(expected):
-    got = dp.Squiggle_Buffer[i].value.integer
-    assert got == (exp & 0xFFFF), f"Squiggle_Buffer[{i}]={got} != {(exp & 0xFFFF)}"
+    got = dp.s_buff[i].value.integer
+    assert got == (exp & 0xFFFF), f"s_buff[{i}]={got} != {(exp & 0xFFFF)}"
   
 
 @cocotb.test()
@@ -35,9 +35,9 @@ async def test_load_query(dut):
   payload = pack_words([qid] + samples)
   await axis_in.send(AxiStreamFrame(payload))
 
-  await with_timeout(wait_state(axil, dut, 3), 300_000, "ns")
+  await with_timeout(wait_state(axil, dut, STATE_RUN), 300_000, "ns")
 
-  await assert_squiggle_buffer_equals(dut, samples)
+  await assert_s_buff_equals(dut, samples)
   assert int(dut.dut.dc.curr_qid.value) == qid
 
 @cocotb.test()
@@ -68,10 +68,10 @@ async def test_query_bubbles(dut):
 
     await axis_in.send(AxiStreamFrame(payload))
 
-    await with_timeout(wait_state(axil, dut, 3), 300_000, "ns")
+    await with_timeout(wait_state(axil, dut, STATE_RUN), 300_000, "ns")
 
     dp = get_dp(dut)
     for i, exp in enumerate(samples):
-        got = dp.Squiggle_Buffer[i].value.integer
-        assert got == (exp & 0xFFFF), f"Squiggle_Buffer[{i}]={got} != {(exp & 0xFFFF)}"
+        got = dp.s_buff[i].value.integer
+        assert got == (exp & 0xFFFF), f"s_buff[{i}]={got} != {(exp & 0xFFFF)}"
     assert int(dut.dut.dc.curr_qid.value) == qid

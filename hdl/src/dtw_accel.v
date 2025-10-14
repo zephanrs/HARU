@@ -93,7 +93,6 @@ module dtw_accel #(
 // Address Map
 localparam  REG_CONTROL      = 0;
 localparam  REG_STATUS       = 1;
-localparam  REG_REF_LEN      = 2;
 localparam  REG_VERSION      = 3;
 localparam  REG_KEY          = 4;
 localparam  REG_REF_DIN      = 6;
@@ -134,7 +133,6 @@ reg   [DATA_WIDTH - 1 : 0]      r_reg_out_data;
 // DTW accel
 reg   [DATA_WIDTH - 1 : 0]      r_control;
 wire  [DATA_WIDTH - 1 : 0]      w_status;
-reg   [DATA_WIDTH - 1 : 0]      r_ref_len;
 wire  [DATA_WIDTH - 1 : 0]      w_version;
 wire  [DATA_WIDTH - 1 : 0]      w_key;
 reg   [DATA_WIDTH - 1 : 0]      r_dbg_ref_din;
@@ -180,7 +178,6 @@ wire  [31:0]                    w_dtw_core_curr_qid;
  * =============================== */
 initial begin
     r_control = 0;
-    r_ref_len = 4000;
 end
 
 /* ===============================
@@ -272,10 +269,7 @@ dtw_core #(
 ) dc (
     .clk                (S_AXI_clk),
     .rst                (w_dtw_core_rst),
-    .rs                 (w_dtw_core_rs),
 
-    .ref_len            (r_ref_len),
-    .op_mode            (w_dtw_core_mode),
     .busy               (w_dtw_core_busy),
     .load_done          (w_dtw_core_load_done),
 
@@ -308,8 +302,6 @@ assign w_version[`VERSION_PAD_RANGE]    = 0;
 assign w_key                            = 32'h0ca7cafe;
 
 assign w_dtw_core_rst                   = r_control[0];
-assign w_dtw_core_rs                    = r_control[1];
-assign w_dtw_core_mode                  = r_control[2];
 
 assign w_status[0]                      = w_dtw_core_busy;
 assign w_status[1]                      = w_dtw_core_load_done;
@@ -333,7 +325,6 @@ always @ (posedge S_AXI_clk) begin
 
         // Reset registers
         r_control       <=  0;
-        r_ref_len       <=  0;
     end else begin
         if (w_reg_in_rdy) begin
             // M_AXI to here
@@ -342,9 +333,6 @@ always @ (posedge S_AXI_clk) begin
                 r_control <= w_reg_in_data;
             end
             REG_STATUS: begin
-            end
-            REG_REF_LEN: begin
-                r_ref_len <= w_reg_in_data;
             end
             REG_VERSION: begin
             end
@@ -379,9 +367,6 @@ always @ (posedge S_AXI_clk) begin
             end
             REG_STATUS: begin
                 r_reg_out_data <= w_status;
-            end
-            REG_REF_LEN: begin
-                r_reg_out_data <= r_ref_len;
             end
             REG_VERSION: begin
                 r_reg_out_data <= w_version;

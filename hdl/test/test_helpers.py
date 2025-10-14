@@ -22,6 +22,10 @@ REG_COUNT        = 0x34
 REG_IDX          = 0x38
 REG_SCORE        = 0x3c
 
+STATE_Q_INIT = 0
+STATE_Q_LOAD = 1
+STATE_RUN    = 2
+
 CR_RESET = 0
 CR_RS    = 1
 CR_MODE  = 2   # 1 = LOAD_QUERY, 0 = NORMAL (stream reference)
@@ -43,7 +47,7 @@ async def reset_core(axil):
   await axil.write(REG_CONTROL, (ctrl |  (1 << CR_RESET)).to_bytes(4, "little"))
   await axil.write(REG_CONTROL, (ctrl & ~(1 << CR_RESET)).to_bytes(4, "little"))
 
-async def wait_state(axil, dut, state=0):
+async def wait_state(axil, dut, state):
   for _ in range(100000):
     rd = await axil.read(REG_STATUS, 4)
     s = int.from_bytes(rd.data, "little")

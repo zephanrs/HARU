@@ -36,7 +36,6 @@ module dtw_core_datapath #(
     input   wire                load,           // Load enable
 
     input   wire [width-1:0]    stream_in,      // input stream
-    input   wire [31:0]         ref_len,        // Reference length
 
     output  reg  [width-1:0]    minval,         // Minimum value
     output  reg  [31:0]         minidx,         // Position of minimum value
@@ -46,31 +45,33 @@ module dtw_core_datapath #(
 /* ===============================
  * registers/wires
  * =============================== */
+
 integer k;
 
-reg     [8:0]           squiggle_buffaddress;
-wire                    load_done;
+// squiggle buffer
+reg     [8:0]           s_addr;
+wire                    s_load_done;
+reg     [width-1:0]     s_buff          [0:SQG_SIZE-1];
 
-reg     [width-1:0]     Squiggle_Buffer [0:SQG_SIZE-1];
-reg     [width-1:0]     ref_buff0;
-reg     [width-1:0]     ref_buff1;
-reg     [width-1:0]     query_buff;
+// stream buffer
+reg     [width-1:0]     stream_in_buff [0:1];
 
+// PE wires
+wire    [width-1:0]     nw; // NW value of PE0
 wire    [width-1:0]     DTW_curr        [0:SQG_SIZE-1];
 wire    [width-1:0]     p_Rword         [0:SQG_SIZE-1];
 
 reg     [width-1:0]     DTW_prev        [0:SQG_SIZE-1];
 reg     [width-1:0]     DTW_pprev       [0:SQG_SIZE-1];
 
+// PE status signals
 reg     [SQG_SIZE-1:0]  running_d;
 reg     [SQG_SIZE-1:0]  last_d;
 
 /* ===============================
  * submodules
  * =============================== */
-wire [width-1:0] nw;
-// nw activation
-assign nw = (!last_d[0] && last_d[1]) ? 0 : -1;
+
 // First PE
 dtw_core_pe #(
     .width(width)
@@ -78,8 +79,8 @@ dtw_core_pe #(
     .clk     (clk),
     .rst     (rst),
     .running (running_d[0]),
-    .x       (Squiggle_Buffer[0]),
-    .y       (ref_buff1),
+    .x       (s_buff[0]),
+    .y       (stream_in_buff[1]),
     .W       (DTW_prev[0]),
     .N       (-1),
     .NW      (nw),
@@ -97,7 +98,7 @@ for (m = 1; m < SQG_SIZE; m = m + 1) begin
         .clk    (clk),
         .rst    (rst),
         .running (running_d[m]),
-        .x      (Squiggle_Buffer[m]),
+        .x      (s_buff[m]),
         .y      (p_Rword[m-1]),
         .W      (DTW_prev[m]),
         .N      (DTW_prev[m-1]),
@@ -111,11 +112,14 @@ endgenerate
 /* ===============================
  * asynchronous logic
  * =============================== */
-assign load_done  = squiggle_buffaddress[8];
+
+assign s_load_done  = s_addr[8];
+assign nw = (!last_d[0] && last_d[1]) ? 0 : -1;
 
 /* ===============================
  * synchronous logic
  * =============================== */
+
 // shift PE running status
 always @(posedge clk) begin
     if(rst) begin
@@ -163,52 +167,42 @@ always @(posedge clk) begin
     end
 end
 
-// Buffer input squiggle (twice)
-always @(posedge clk) begin
-    if (rst) begin
-        query_buff <= 0;
-    end else begin
-        query_buff <= stream_in;
-    end
-end
-
-
-// Load squiggle sample value
+// load squiggle buffer
 always @(posedge clk) begin
     if (rst) begin
         for(k = 0; k < SQG_SIZE; k = k + 1) begin
-            Squiggle_Buffer[k] <= 0;
+            s_buff[k] <= 0;
         end
     end else if (load) begin
-        if (!load_done) begin
-            Squiggle_Buffer[squiggle_buffaddress[7:0]] <= query_buff;
+        if (!s_load_done) begin
+            s_buff[s_addr[7:0]] <= stream_in_buff[0];
         end
     end
 end
 
-// Squiggle buffer address handling
+// squiggle buffer address
 always @(posedge clk) begin
     if (rst) begin
-        squiggle_buffaddress <= 0;
+        s_addr <= 0;
     end else if (load) begin
-        if(!load_done) begin
-            squiggle_buffaddress <= squiggle_buffaddress + 1;
+        if(!s_load_done) begin
+            s_addr <= s_addr + 1;
         end
     end
 end
 
-// reference sample load
+// buffer stream input
 always @(posedge clk) begin
     if (rst) begin
-        ref_buff0 <= 0;
-        ref_buff1 <= 0;
+        stream_in_buff[0] <= 0;
+        stream_in_buff[1] <= 0;
     end else begin
-        ref_buff0 <= stream_in;
-        ref_buff1 <= ref_buff0;
+        stream_in_buff[0] <= stream_in;
+        stream_in_buff[1] <= stream_in_buff[0];
     end
 end
 
-// Min value and position update
+// min score and reference index update
 always @(posedge clk) begin
     if (rst) begin
         minval    <= -1;

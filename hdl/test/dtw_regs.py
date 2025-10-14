@@ -37,10 +37,6 @@ async def test_write_read_control(dut):
 
     rc  = dut.dut.r_control.value.integer
     rst = dut.dut.w_dtw_core_rst.value.integer
-    rs  = dut.dut.w_dtw_core_rs.value.integer
-    md  = dut.dut.w_dtw_core_mode.value.integer
 
     assert rc == val
     assert rst == ((val >> CR_RESET) & 1)
-    assert rs  == ((val >> CR_RS)    & 1)
-    assert md  == ((val >> CR_MODE)  & 1)

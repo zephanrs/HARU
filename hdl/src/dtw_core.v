@@ -39,10 +39,7 @@ module dtw_core #(
     // Main DTW signals
     input   wire                    clk,
     input   wire                    rst,
-    input   wire                    rs,
 
-    input   wire [AXIS_WIDTH-1 : 0] ref_len,
-    input   wire                    op_mode,            // Reference mode: 0, query mode: 1
     output  reg                     busy,               // Idle: 0, busy: 1
     output  wire                    load_done,
 
@@ -82,10 +79,9 @@ localparam
 
 // FSM states
 localparam [2:0] // n states
-    RESET      = 0,
-    DTW_Q_INIT = 1,
-    DTW_Q_LOAD = 2,
-    DTW_RUN    = 3;
+    DTW_Q_INIT = 0,
+    DTW_Q_LOAD = 1,
+    DTW_RUN    = 2;
 
 /* ===============================
  * registers/wires
@@ -97,7 +93,6 @@ reg  [swidth-1:0]   counter;
 reg                 done;
 
 // DTW datapath signals
-reg                 dp_rst;             // dp core reset
 reg                 dp_running;         // dp core run enable
 reg                 dp_last;
 reg                 dp_load;            // dp core load enable
@@ -119,12 +114,11 @@ dtw_core_datapath #(
     .SQG_SIZE   (SQG_SIZE)
 ) inst_dtw_core_datapath (
     .clk            (clk),
-    .rst            (dp_rst),
+    .rst            (rst),
     .running        (dp_running),
     .last           (dp_last),
     .load           (dp_load),
     .stream_in      (src_fifo_data[15:0]),
-    .ref_len        (ref_len),
     .minval         (curr_score),
     .minidx         (curr_idx),
     .ref_count      (curr_count)
@@ -146,12 +140,9 @@ assign dbg_curr_qid = curr_qid;
 // FSM State change
 always @(posedge clk) begin
     if (rst) begin
-        r_state <= RESET;
+        r_state <= DTW_Q_INIT;
     end else begin
         case (r_state)
-        RESET: begin
-            r_state <= DTW_Q_INIT;
-        end
         DTW_Q_INIT: begin
             if (!src_fifo_empty)
                 r_state <= DTW_Q_LOAD;
@@ -162,18 +153,16 @@ always @(posedge clk) begin
         end
         DTW_RUN: begin
         end
-        default: r_state <= RESET;
+        default: r_state <= DTW_Q_INIT;
         endcase
     end
 end
 
 // FSM output
 always @(posedge clk) begin
-    case (r_state)
-    RESET: begin
+    if (rst) begin
         busy                    <= 0;
         src_fifo_rden           <= 0;
-        dp_rst                  <= 1;
         dp_running              <= 0;
         dp_last                 <= 1;
         dp_load                 <= 0;
@@ -182,50 +171,47 @@ always @(posedge clk) begin
         curr_qid                <= 0;
         counter                 <= 0;
     end
-    DTW_Q_INIT: begin
-        busy                    <= 0;
-        src_fifo_rden           <= 1;
-        dp_rst                  <= 0;
-        stall_counter           <= 0;
-        r_src_fifo_clear        <= 0;
-        curr_qid                <= src_fifo_data;
-    end
-    DTW_Q_LOAD: begin
-        busy                    <= 1;
-        dp_rst                  <= 0;
-        stall_counter           <= 0;
-        r_src_fifo_clear        <= 0;
-        dp_running              <= 0;
-        src_fifo_rden           <= 1;
-
-        dp_load                 <= !src_fifo_empty;
-
-        if (!src_fifo_empty)
-            counter             <= done ? 0 : counter + 1;
-    end
-    DTW_RUN: begin
-        busy                    <= 1;
-        dp_rst                  <= 0;
-        stall_counter           <= 0;
-        r_src_fifo_clear        <= 0;
-        dp_load                 <= 0;
-        src_fifo_rden           <= 1;
-
-        dp_running              <= !src_fifo_empty;
-        dp_last                 <= done;
-
-        if (!src_fifo_empty) begin
-            counter             <= counter + 1;
+    case (r_state)
+        DTW_Q_INIT: begin
+            busy                    <= 0;
+            src_fifo_rden           <= 1;
+            stall_counter           <= 0;
+            r_src_fifo_clear        <= 0;
+            curr_qid                <= src_fifo_data;
         end
-    end
-    default: begin
-        busy                    <= 0;
-        src_fifo_rden           <= 0;
-        dp_rst                  <= 1;
-        dp_running              <= 0;
-        stall_counter           <= 0;
-        r_src_fifo_clear        <= 1;
-    end
+        DTW_Q_LOAD: begin
+            busy                    <= 1;
+            stall_counter           <= 0;
+            r_src_fifo_clear        <= 0;
+            dp_running              <= 0;
+            src_fifo_rden           <= 1;
+
+            dp_load                 <= !src_fifo_empty;
+
+            if (!src_fifo_empty)
+                counter             <= done ? 0 : counter + 1;
+        end
+        DTW_RUN: begin
+            busy                    <= 1;
+            stall_counter           <= 0;
+            r_src_fifo_clear        <= 0;
+            dp_load                 <= 0;
+            src_fifo_rden           <= 1;
+
+            dp_running              <= !src_fifo_empty;
+            dp_last                 <= done;
+
+            if (!src_fifo_empty) begin
+                counter             <= counter + 1;
+            end
+        end
+        default: begin
+            busy                    <= 0;
+            src_fifo_rden           <= 0;
+            dp_running              <= 0;
+            stall_counter           <= 0;
+            r_src_fifo_clear        <= 1;
+        end
     endcase
 end
 

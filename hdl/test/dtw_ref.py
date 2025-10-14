@@ -13,17 +13,6 @@ async def wait_cycles(clk, n):
     for _ in range(n):
         await RisingEdge(clk)
 
-@cocotb.test()
-async def test_set_ref_len(dut):
-    start_dut(dut)
-    axil = AxiLiteMaster(AxiLiteBus.from_prefix(dut, "aximl"), dut.clk)
-    await reset_dut(dut)
-
-    val = 64
-    await axil.write(REG_REF_LEN, val.to_bytes(4, "little"))
-    rd = await axil.read(REG_REF_LEN, 4)
-    assert int.from_bytes(rd.data, "little") == val
-
 async def check_ref_stream_into_pe0(dut, reference_words):
     dp = dut.dut.dc.inst_dtw_core_datapath
     pe0_y = dp.inst_dtw_core_pe_0.y
@@ -52,7 +41,7 @@ async def test_load_reference(dut):
 
     await enter_query_load_mode(axil)
     await axis.send(AxiStreamFrame(pack_words([qid] + query)))
-    await with_timeout(wait_state(axil, dut, 3), 200_000, "ns")
+    await with_timeout(wait_state(axil, dut, STATE_RUN), 200_000, "ns")
 
     ref = [i + 20 for i in range(SQG_SIZE)]
     send_task = cocotb.start_soon(axis.send(AxiStreamFrame(pack_words(ref))))
@@ -76,7 +65,7 @@ async def test_reference_bubbles(dut):
 
     await enter_query_load_mode(axil)
     await axis.send(AxiStreamFrame(pack_words([qid] + query)))
-    await with_timeout(wait_state(axil, dut, 3), 200_000, "ns")
+    await with_timeout(wait_state(axil, dut, STATE_RUN), 200_000, "ns")
 
     await wait_cycles(dut.clk, 10) # some delay
 

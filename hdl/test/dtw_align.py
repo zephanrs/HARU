@@ -10,7 +10,6 @@ import numpy as np
 
 SQG_SIZE = 256
 
-
 def dtw(reference, query):
   r = np.asarray(reference, dtype=np.uint16)
   q = np.asarray(query,     dtype=np.uint16)
@@ -33,7 +32,6 @@ def dtw(reference, query):
 
   return int(dp[n, m]), m - 1
 
-
 async def setup(dut):
   start_dut(dut)
 
@@ -45,15 +43,11 @@ async def setup(dut):
 
   return axil, axis_in
 
-
 async def load_query(dut, axil, axis_in, qid, samples, ref_len):
   await axil.write(REG_REF_LEN, int(ref_len).to_bytes(4, "little"))
 
   await enter_query_load_mode(axil)
   await axis_in.send(AxiStreamFrame(pack_words([qid] + samples)))
-
-  await with_timeout(wait_state(axil, dut, 1), 200_000, "ns")
-
 
 async def load_reference(dut, axil, axis_in, ref_words):
   await axis_in.send(AxiStreamFrame(pack_words(ref_words)))
