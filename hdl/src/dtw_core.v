@@ -70,6 +70,7 @@ module dtw_core #(
 
     // new dtw signals
     output  reg  [31:0]             curr_qid,
+    output  wire [31:0]             curr_count,
     output  wire [31:0]             curr_idx,
     output  wire [31:0]             curr_score
 );
@@ -140,10 +141,11 @@ dtw_core_datapath #(
     .Input_squiggle (src_fifo_data[15:0]),
     .Rword          (src_fifo_data[15:0]),
     .ref_len        (ref_len),
+    .done           (dp_done),
+    .load_done      (dp_load_done),
     .minval         (curr_score),
     .minidx         (curr_idx),
-    .done           (dp_done),
-    .load_done      (dp_load_done)
+    .ref_count      (curr_count)
 );
 
 /* ===============================

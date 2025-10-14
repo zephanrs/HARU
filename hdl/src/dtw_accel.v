@@ -156,6 +156,7 @@ wire  [DATA_WIDTH - 1 : 0]      w_dtw_core_cycle_counter;
 
 // new DTW accel
 wire  [31:0]                    w_dtw_core_qid;
+wire  [31:0]                    w_dtw_core_count;
 wire  [31:0]                    w_dtw_core_idx;
 wire  [DATA_WIDTH - 1 : 0]      w_dtw_core_score;
 
@@ -324,6 +325,7 @@ dtw_core #(
     .dbg_curr_qid       (w_dtw_core_curr_qid),
 
     .curr_qid           (w_dtw_core_qid),
+    .curr_count         (w_dtw_core_count),
     .curr_idx           (w_dtw_core_idx),
     .curr_score         (w_dtw_core_score)
 );
@@ -488,6 +490,9 @@ always @ (posedge S_AXI_clk) begin
             end
             REG_QID: begin
                 r_reg_out_data <= w_dtw_core_qid;
+            end
+            REG_COUNT: begin
+                r_reg_out_data <= w_dtw_core_count;
             end
             REG_IDX: begin
                 r_reg_out_data <= w_dtw_core_idx;
