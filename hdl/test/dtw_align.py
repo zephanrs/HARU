@@ -179,7 +179,7 @@ async def test_align_multiple_random(dut):
 
 
 @cocotb.test()
-async def test_align_multiple_random_with_latency(dut):
+async def test_align_random_latency(dut):
   axil, axis_in = await setup(dut)
 
   rng = random.Random(0xfeed)

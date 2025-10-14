@@ -34,9 +34,7 @@ SOFTWARE.
 module dtw_core #(
     parameter WIDTH         = 16,   // Data width
     parameter AXIS_WIDTH    = 32,   // AXI data width
-    parameter SQG_SIZE      = 256,  // Squiggle size
-    parameter REF_INIT      = 0,
-    parameter REFMEM_PTR_WIDTH = 20
+    parameter SQG_SIZE      = 256   // Squiggle size
 )(
     // Main DTW signals
     input   wire                    clk,
@@ -56,7 +54,6 @@ module dtw_core #(
 
     // debug signals
     output  wire [2:0]              dbg_state,
-    output  wire [REFMEM_PTR_WIDTH-1:0]             dbg_addr_ref,
 
     output  wire [31:0]             dbg_cycle_counter,
     output  wire [31:0]             dbg_nquery,
@@ -85,7 +82,7 @@ localparam
 
 // FSM states
 localparam [2:0] // n states
-    IDLE       = 0,
+    RESET      = 0,
     DTW_Q_INIT = 1,
     DTW_Q_LOAD = 2,
     DTW_RUN    = 3;
@@ -94,9 +91,6 @@ localparam [2:0] // n states
  * registers/wires
  * =============================== */
 reg r_src_fifo_clear;
-
-// Ref mem signals
-reg  [REFMEM_PTR_WIDTH-1:0] addr_ref;          // Read address for refmem 
 
 // counter
 reg  [swidth-1:0]   counter;
@@ -107,8 +101,6 @@ reg                 dp_rst;             // dp core reset
 reg                 dp_running;         // dp core run enable
 reg                 dp_last;
 reg                 dp_load;            // dp core load enable
-wire                dp_done;            // dp core done
-wire                dp_load_done;       // dp core load done
 
 // FSM state
 reg [2:0] r_state;
@@ -131,11 +123,8 @@ dtw_core_datapath #(
     .running        (dp_running),
     .last           (dp_last),
     .load           (dp_load),
-    .Input_squiggle (src_fifo_data[15:0]),
-    .Rword          (src_fifo_data[15:0]),
+    .stream_in      (src_fifo_data[15:0]),
     .ref_len        (ref_len),
-    .done           (dp_done),
-    .load_done      (dp_load_done),
     .minval         (curr_score),
     .minidx         (curr_idx),
     .ref_count      (curr_count)
@@ -148,7 +137,6 @@ assign done = (counter == (SQG_SIZE - 1)); // counter[swidth]
 assign load_done = done; 
 assign src_fifo_clear = r_src_fifo_clear;
 assign dbg_state = r_state;
-assign dbg_addr_ref = addr_ref;
 assign dbg_nquery = r_dbg_nquery;
 assign dbg_curr_qid = curr_qid;
 
@@ -158,12 +146,11 @@ assign dbg_curr_qid = curr_qid;
 // FSM State change
 always @(posedge clk) begin
     if (rst) begin
-        r_state <= IDLE;
+        r_state <= RESET;
     end else begin
         case (r_state)
-        IDLE: begin
-            if (rs && op_mode == MODE_LOAD_QUERY && dp_load_done == 0)
-                r_state <= DTW_Q_INIT;
+        RESET: begin
+            r_state <= DTW_Q_INIT;
         end
         DTW_Q_INIT: begin
             if (!src_fifo_empty)
@@ -175,7 +162,7 @@ always @(posedge clk) begin
         end
         DTW_RUN: begin
         end
-        default: r_state <= IDLE;
+        default: r_state <= RESET;
         endcase
     end
 end
@@ -183,10 +170,9 @@ end
 // FSM output
 always @(posedge clk) begin
     case (r_state)
-    IDLE: begin
+    RESET: begin
         busy                    <= 0;
         src_fifo_rden           <= 0;
-        addr_ref                <= 0;
         dp_rst                  <= 1;
         dp_running              <= 0;
         dp_last                 <= 1;
@@ -197,7 +183,7 @@ always @(posedge clk) begin
         counter                 <= 0;
     end
     DTW_Q_INIT: begin
-        busy                    <= 1;
+        busy                    <= 0;
         src_fifo_rden           <= 1;
         dp_rst                  <= 0;
         stall_counter           <= 0;
@@ -210,7 +196,6 @@ always @(posedge clk) begin
         stall_counter           <= 0;
         r_src_fifo_clear        <= 0;
         dp_running              <= 0;
-        addr_ref                <= 0;
         src_fifo_rden           <= 1;
 
         dp_load                 <= !src_fifo_empty;
@@ -236,7 +221,6 @@ always @(posedge clk) begin
     default: begin
         busy                    <= 0;
         src_fifo_rden           <= 0;
-        addr_ref                <= 0;
         dp_rst                  <= 1;
         dp_running              <= 0;
         stall_counter           <= 0;

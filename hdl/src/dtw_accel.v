@@ -96,10 +96,8 @@ localparam  REG_STATUS       = 1;
 localparam  REG_REF_LEN      = 2;
 localparam  REG_VERSION      = 3;
 localparam  REG_KEY          = 4;
-localparam  REG_REF_ADDR     = 5;
 localparam  REG_REF_DIN      = 6;
 localparam  REG_CYCLE_CNT    = 8;
-localparam  REG_CORE_REF_ADDR= 9;
 localparam  REG_NQUERY       = 10;
 localparam  REG_CURR_QID     = 11;
 
@@ -139,7 +137,6 @@ wire  [DATA_WIDTH - 1 : 0]      w_status;
 reg   [DATA_WIDTH - 1 : 0]      r_ref_len;
 wire  [DATA_WIDTH - 1 : 0]      w_version;
 wire  [DATA_WIDTH - 1 : 0]      w_key;
-reg   [DATA_WIDTH - 1 : 0]      r_dbg_ref_addr;
 reg   [DATA_WIDTH - 1 : 0]      r_dbg_ref_din;
 wire  [DATA_WIDTH - 1 : 0]      w_dbg_ref_dout;
 wire  [DATA_WIDTH - 1 : 0]      w_dtw_core_cycle_counter;
@@ -174,7 +171,6 @@ wire                            w_src_fifo_not_empty;
 
 // dtw core debug
 wire  [2:0]                     w_dtw_core_state;
-wire  [REFMEM_PTR_WIDTH-1:0]    w_dtw_core_addr_ref;
 wire  [31:0]                    w_dtw_core_nquery;
 wire  [31:0]                    w_dtw_core_curr_qid;
 
@@ -272,9 +268,7 @@ fifo #(
 // DTW core
 dtw_core #(
     .WIDTH              (16),
-    .AXIS_WIDTH         (AXIS_DATA_WIDTH),
-    .REF_INIT           (0),
-    .REFMEM_PTR_WIDTH   (REFMEM_PTR_WIDTH)
+    .AXIS_WIDTH         (AXIS_DATA_WIDTH)
 ) dc (
     .clk                (S_AXI_clk),
     .rst                (w_dtw_core_rst),
@@ -291,7 +285,6 @@ dtw_core #(
     .src_fifo_data      (w_src_fifo_r_data),
 
     .dbg_state          (w_dtw_core_state),
-    .dbg_addr_ref       (w_dtw_core_addr_ref),
 
     .dbg_cycle_counter  (w_dtw_core_cycle_counter),
     .dbg_nquery         (w_dtw_core_nquery),
@@ -357,15 +350,10 @@ always @ (posedge S_AXI_clk) begin
             end
             REG_KEY: begin
             end
-            REG_REF_ADDR: begin
-                r_dbg_ref_addr <= w_reg_in_data;
-            end
             REG_REF_DIN: begin
                 r_dbg_ref_din <= w_reg_in_data;
             end
             REG_CYCLE_CNT: begin
-            end
-            REG_CORE_REF_ADDR: begin
             end
             REG_NQUERY: begin
             end
@@ -401,17 +389,11 @@ always @ (posedge S_AXI_clk) begin
             REG_KEY: begin
                 r_reg_out_data <= w_key;
             end
-            REG_REF_ADDR: begin
-                r_reg_out_data <= r_dbg_ref_addr;
-            end
             REG_REF_DIN: begin
                 r_reg_out_data <= r_dbg_ref_din;
             end
             REG_CYCLE_CNT: begin
                 r_reg_out_data <= w_dtw_core_cycle_counter;
-            end
-            REG_CORE_REF_ADDR: begin
-                r_reg_out_data <= {14'h0, w_dtw_core_addr_ref};
             end
             REG_NQUERY: begin
                 r_reg_out_data <= w_dtw_core_nquery;

@@ -35,15 +35,12 @@ module dtw_core_datapath #(
     input   wire                last,           // last reference
     input   wire                load,           // Load enable
 
-    input   wire [width-1:0]    Input_squiggle, // Squiggle sample
-    input   wire [width-1:0]    Rword,          // Reference sample
+    input   wire [width-1:0]    stream_in,      // input stream
     input   wire [31:0]         ref_len,        // Reference length
-    output  wire                done,           // Query search done
-    output  wire                load_done,
 
-    output  wire [width-1:0]    minval,         // Minimum value
-    output  wire [31:0]         minidx,         // Position of minimum value
-    output  wire [31:0]         ref_count       // # References procesed
+    output  reg  [width-1:0]    minval,         // Minimum value
+    output  reg  [31:0]         minidx,         // Position of minimum value
+    output  reg  [31:0]         ref_count       // # References procesed
 );
 
 /* ===============================
@@ -51,8 +48,8 @@ module dtw_core_datapath #(
  * =============================== */
 integer k;
 
-reg     [31:0]          cycle_counter;
 reg     [8:0]           squiggle_buffaddress;
+wire                    load_done;
 
 reg     [width-1:0]     Squiggle_Buffer [0:SQG_SIZE-1];
 reg     [width-1:0]     ref_buff0;
@@ -68,10 +65,6 @@ reg     [width-1:0]     DTW_pprev       [0:SQG_SIZE-1];
 reg     [SQG_SIZE-1:0]  running_d;
 reg     [SQG_SIZE-1:0]  last_d;
 
-reg     [width-1:0]     Minval;
-reg     [31:0]          Minidx;
-reg     [31:0]          Ref_count;
-
 /* ===============================
  * submodules
  * =============================== */
@@ -82,23 +75,17 @@ assign nw = (!last_d[0] && last_d[1]) ? 0 : -1;
 dtw_core_pe #(
     .width(width)
 ) inst_dtw_core_pe_0 (
-    .clk  (clk),
-    .rst  (rst),
+    .clk     (clk),
+    .rst     (rst),
     .running (running_d[0]),
-    .x    (Squiggle_Buffer[0]),
-    .y    (ref_buff1),
-    .W    (DTW_prev[0]),
-    .N    (-1),
-    .NW   (nw),
-    .DTWc (DTW_curr[0]),
-    .yp   (p_Rword[0])
+    .x       (Squiggle_Buffer[0]),
+    .y       (ref_buff1),
+    .W       (DTW_prev[0]),
+    .N       (-1),
+    .NW      (nw),
+    .DTWc    (DTW_curr[0]),
+    .yp      (p_Rword[0])
 );
-
-wire runningd0 = running_d[0];
-wire runningdl = running_d[SQG_SIZE-1];
-
-wire lastd0 = last_d[0];
-wire lastdl = last_d[SQG_SIZE-1];
 
 // Other PEs
 genvar m;
@@ -124,11 +111,6 @@ endgenerate
 /* ===============================
  * asynchronous logic
  * =============================== */
-assign minval     = Minval;
-assign minidx     = Minidx;
-assign ref_count  = Ref_count;
-assign done       = (cycle_counter >= ref_len);
-assign dbg_cycle_counter = cycle_counter;
 assign load_done  = squiggle_buffaddress[8];
 
 /* ===============================
@@ -186,7 +168,7 @@ always @(posedge clk) begin
     if (rst) begin
         query_buff <= 0;
     end else begin
-        query_buff <= Input_squiggle;
+        query_buff <= stream_in;
     end
 end
 
@@ -221,32 +203,23 @@ always @(posedge clk) begin
         ref_buff0 <= 0;
         ref_buff1 <= 0;
     end else begin
-        ref_buff0 <= Rword;
+        ref_buff0 <= stream_in;
         ref_buff1 <= ref_buff0;
-    end
-end
-
-// cycle counter handling
-always @(posedge clk) begin
-    if (rst) begin
-        cycle_counter <=  0;
-    end else if (running_d[SQG_SIZE-1]) begin
-        cycle_counter <= cycle_counter + 1;
     end
 end
 
 // Min value and position update
 always @(posedge clk) begin
     if (rst) begin
-        Minval <= -1;
-        Minidx <= 0;
-        Ref_count <= 0;
+        minval    <= -1;
+        minidx    <= 0;
+        ref_count <= 0;
     end else if (last_d[SQG_SIZE-1] && running_d[SQG_SIZE-1]) begin
-        if (DTW_curr[SQG_SIZE-1] < Minval) begin
-            Minval <= DTW_curr[SQG_SIZE-1];
-            Minidx <= Ref_count;
+        if (DTW_curr[SQG_SIZE-1] < minval) begin
+            minval <= DTW_curr[SQG_SIZE-1];
+            minidx <= ref_count;
         end
-        Ref_count <= Ref_count + 1;
+        ref_count <= ref_count + 1;
     end
 end
 
