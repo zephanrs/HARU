@@ -99,7 +99,7 @@ reg r_src_fifo_clear;
 reg  [REFMEM_PTR_WIDTH-1:0] addr_ref;          // Read address for refmem 
 
 // counter
-reg  [swidth:0]     counter;
+reg  [swidth-1:0]   counter;
 reg                 done;
 
 // DTW datapath signals
@@ -144,7 +144,7 @@ dtw_core_datapath #(
 /* ===============================
  * asynchronous logic
  * =============================== */
-assign done = (counter == SQG_SIZE); // counter[swidth]
+assign done = (counter == (SQG_SIZE - 1)); // counter[swidth]
 assign load_done = done; 
 assign src_fifo_clear = r_src_fifo_clear;
 assign dbg_state = r_state;
@@ -194,7 +194,7 @@ always @(posedge clk) begin
         stall_counter           <= 0;
         r_src_fifo_clear        <= 1;
         curr_qid                <= 0;
-        counter                 <= 1;
+        counter                 <= 0;
     end
     DTW_Q_INIT: begin
         busy                    <= 1;
@@ -216,7 +216,7 @@ always @(posedge clk) begin
         dp_load                 <= !src_fifo_empty;
 
         if (!src_fifo_empty)
-            counter             <= done ? 1 : counter + 1;
+            counter             <= done ? 0 : counter + 1;
     end
     DTW_RUN: begin
         busy                    <= 1;
@@ -228,7 +228,7 @@ always @(posedge clk) begin
 
         dp_running              <= !src_fifo_empty;
 
-        if (!done && !src_fifo_empty) begin
+        if (!src_fifo_empty) begin
             counter             <= counter + 1;
             dp_last             <= 0;
         end else if (done) begin
