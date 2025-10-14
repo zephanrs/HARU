@@ -1,4 +1,3 @@
-# dtw_query.py
 import cocotb
 from cocotb.triggers import RisingEdge, with_timeout
 from cocotbext.axi import (
@@ -18,6 +17,7 @@ async def assert_squiggle_buffer_equals(dut, expected):
   for i, exp in enumerate(expected):
     got = dp.Squiggle_Buffer[i].value.integer
     assert got == (exp & 0xFFFF), f"Squiggle_Buffer[{i}]={got} != {(exp & 0xFFFF)}"
+  
 
 @cocotb.test()
 async def test_load_query(dut):
@@ -27,6 +27,7 @@ async def test_load_query(dut):
   axis_out = AxiStreamSink  (AxiStreamBus.from_prefix(dut, "axis_out"),dut.clk)
 
   await reset_dut(dut); await reset_core(axil)
+  await axil.write(REG_REF_LEN, (1).to_bytes(4, "little"))
 
   await enter_query_load_mode(axil)
 
@@ -34,6 +35,8 @@ async def test_load_query(dut):
   samples = [(i & 0xFFFF) for i in range(SQG_SIZE)]
   payload = pack_words([qid] + samples)
   await axis_in.send(AxiStreamFrame(payload))
+
+  await with_timeout(wait_state(axil, dut, 3), 300_000, "ns")
 
   await assert_squiggle_buffer_equals(dut, samples)
   assert int(dut.dut.dc.curr_qid.value) == qid
@@ -46,6 +49,7 @@ async def test_query_bubbles(dut):
   axis_out = AxiStreamSink  (AxiStreamBus.from_prefix(dut, "axis_out"),dut.clk)
 
   await reset_dut(dut); await reset_core(axil)
+  await axil.write(REG_REF_LEN, (1).to_bytes(4, "little"))
 
   await enter_query_load_mode(axil)
 
@@ -65,7 +69,6 @@ async def test_query_bubbles(dut):
         await RisingEdge(dut.clk)
       axis_in.pause = False
 
-  # Wait for DTW_RUN (state = 3) after query load completes
   await with_timeout(wait_state(axil, dut, 3), 300_000, "ns")
 
   dp = get_dp(dut)

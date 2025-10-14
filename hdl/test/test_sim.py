@@ -53,13 +53,12 @@ for p in sorted(test_path.glob(test_glob_pattern)):
   tests += get_tests(sys.modules[modname])
 
 def setup_runner():
-  # sim = os.getenv("SIM", "icarus")
-  sim = os.getenv("SIM", "verilator")
+  sim = os.getenv("SIM", "icarus")
   runner = get_runner(sim)
 
   build_args = [f"-I{src_path}"]
   if sim.lower() == "icarus":
-    build_args = ["-g2012"]
+    build_args += ["-g2012"]
 
   runner.build(
     sources=[str(s) for s in sources],
@@ -95,7 +94,7 @@ def test_runner(test_case, request):
     test_module=",".join(test_modules),
     testcase=test_case,
     test_dir=str(build_dir),
-    waves=waves,
+    waves=True,
     verbose=True,
     plusargs=plusargs,
   )

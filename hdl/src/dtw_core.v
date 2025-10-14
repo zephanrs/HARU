@@ -251,7 +251,7 @@ always @(posedge clk) begin
         r_src_fifo_clear        <= 0;
         dp_load                 <= 0;
 
-        if (addr_ref < REFMEM_PTR_WIDTH'(ref_len)) begin // loading ref
+        if (addr_ref < REFMEM_PTR_WIDTH'(ref_len) - 1) begin // loading ref
             if (!src_fifo_empty) begin
                 addr_ref        <= addr_ref + 1;
                 src_fifo_rden   <= 1;
