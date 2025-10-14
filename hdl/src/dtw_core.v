@@ -32,42 +32,40 @@ SOFTWARE.
 `timescale 1ns / 1ps
 
 module dtw_core #(
-    parameter WIDTH         = 16,   // Data width
-    parameter AXIS_WIDTH    = 32,   // AXI data width
-    parameter SQG_SIZE      = 256   // Squiggle size
+    parameter WIDTH         = 16,   // data width
+    parameter AXIS_WIDTH    = 32,   // axi data width
+    parameter SQG_SIZE      = 256   // squiggle size
 )(
-    // Main DTW signals
+    // main dtw signals
     input   wire                    clk,
     input   wire                    rst,
 
     output  reg                     busy,               // Idle: 0, busy: 1
     output  wire                    load_done,
+    output  reg  [1:0]              curr_state,
 
-    // Src FIFO signals
-    output  reg                     src_fifo_clear,     // Src FIFO Clear signal
-    output  reg                     src_fifo_rden,      // Src FIFO Read enable
-    input   wire                    src_fifo_empty,     // Src FIFO Empty
-    input   wire [31:0]             src_fifo_data,      // Src FIFO Data
+    // src fifo signals
+    output  reg                     src_fifo_clear,     // src fifo Clear signal
+    output  reg                     src_fifo_rden,      // src fifo Read enable
+    input   wire                    src_fifo_empty,     // src fifo Empty
+    input   wire [31:0]             src_fifo_data,      // src fifo Data
 
     // output signals
     output  reg  [31:0]             curr_qid,
     output  wire [31:0]             curr_count,
     output  wire [31:0]             curr_idx,
-    output  wire [31:0]             curr_score,
-
-    // debug signals
-    output  reg  [2:0]              curr_state
+    output  wire [31:0]             curr_score
 );
 
 /* ===============================
  * local parameters
  * =============================== */
 
-// Squiggle size
+// squiggle size
 localparam swidth = $clog2(SQG_SIZE);
 
-// FSM states
-localparam [2:0]
+// fsm states
+localparam [1:0]
     DTW_Q_INIT = 0,
     DTW_Q_LOAD = 1,
     DTW_RUN    = 2;
@@ -80,7 +78,7 @@ localparam [2:0]
 reg  [swidth-1:0]   counter;
 reg                 done;
 
-// DTW datapath signals
+// dtw datapath signals
 reg                 dp_running;         // dp core run enable
 reg                 dp_last;            // dp core last reference event
 reg                 dp_load;            // dp core load enable
@@ -89,7 +87,7 @@ reg                 dp_load;            // dp core load enable
  * submodules
  * =============================== */
 
-// DTW datapath
+// dtw datapath
 dtw_core_datapath #(
     .width      (WIDTH),
     .SQG_SIZE   (SQG_SIZE)
@@ -116,7 +114,7 @@ assign load_done = (curr_state == DTW_RUN);
  * synchronous logic
  * =============================== */
 
-// FSM State change
+// fsm state change
 always @(posedge clk) begin
     if (rst) begin
         curr_state <= DTW_Q_INIT;
@@ -135,7 +133,7 @@ always @(posedge clk) begin
     end
 end
 
-// FSM output
+// fsm output
 always @(posedge clk) begin
     if (rst) begin
         busy                    <= 0;

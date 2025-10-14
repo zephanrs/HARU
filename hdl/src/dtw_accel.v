@@ -75,8 +75,6 @@ module dtw_accel #(
     output wire [1:0]                       S_AXI_rresp,
     output wire [DATA_WIDTH - 1: 0]         S_AXI_rdata,
 
-    // AXI Stream
-
     // Input AXI Stream
     input  wire                             SRC_AXIS_clk,
     input  wire                             SRC_AXIS_rst,
@@ -93,15 +91,15 @@ module dtw_accel #(
 // Address Map
 localparam  REG_CONTROL      = 0;
 localparam  REG_STATUS       = 1;
-localparam  REG_VERSION      = 3;
-localparam  REG_KEY          = 4;
-localparam  REG_REF_DIN      = 6;
+localparam  REG_VERSION      = 2;
+localparam  REG_KEY          = 3;
+localparam  REG_REF_DIN      = 4;
 
 // DTW registers
-localparam  REG_QID          = 12;
-localparam  REG_COUNT        = 13;
-localparam  REG_IDX          = 14;
-localparam  REG_SCORE        = 15;     
+localparam  REG_QID          = 5;
+localparam  REG_COUNT        = 6;
+localparam  REG_IDX          = 7;
+localparam  REG_SCORE        = 8;     
 
 localparam  integer ADDR_LSB = (DATA_WIDTH / 32) + 1;
 localparam  integer ADDR_BITS = 3;
@@ -164,7 +162,7 @@ wire                            w_src_fifo_empty;
 wire                            w_src_fifo_not_empty;
 
 // dtw core debug
-wire  [2:0]                     w_dtw_core_state;
+wire  [1:0]                     w_dtw_core_state;
 
 
 /* ===============================
@@ -283,6 +281,7 @@ dtw_core #(
 /* ===============================
  * asynchronous logic
  * =============================== */
+
 assign w_axi_rst                        = INVERT_AXI_RESET  ? ~S_AXI_rst    : S_AXI_rst;
 assign w_axis_rst                       = INVERT_AXIS_RESET ? ~SRC_AXIS_rst : SRC_AXIS_rst;
 assign w_version[`MAJOR_RANGE]          = `MAJOR_VERSION;
@@ -297,9 +296,8 @@ assign w_status[0]                      = w_dtw_core_busy;
 assign w_status[1]                      = w_dtw_core_load_done;
 assign w_status[2]                      = w_src_fifo_empty;
 assign w_status[3]                      = w_src_fifo_full;
-assign w_status[5:4]                    = 2'b00;
-assign w_status[8:6]                    = w_dtw_core_state;
-assign w_status[31:9]                   = 0;
+assign w_status[5:4]                    = w_dtw_core_state;
+assign w_status[31:6]                   = 0;
 
 /* ===============================
  * synchronous logic
