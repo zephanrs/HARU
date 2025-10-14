@@ -54,12 +54,6 @@ module dtw_core #(
     input   wire                    src_fifo_empty,     // Src FIFO Empty
     input   wire [31:0]             src_fifo_data,      // Src FIFO Data
 
-    // Sink FIFO signals
-    output  reg                     sink_fifo_wren,     // Sink FIFO Write enable
-    input   wire                    sink_fifo_full,     // Sink FIFO Full
-    output  reg [31:0]              sink_fifo_data,     // Sink FIFO Data
-    output  reg                     sink_fifo_last,     // Sink FIFO Last
-
     // debug signals
     output  wire [2:0]              dbg_state,
     output  wire [REFMEM_PTR_WIDTH-1:0]             dbg_addr_ref,
@@ -94,8 +88,7 @@ localparam [2:0] // n states
     IDLE       = 0,
     DTW_Q_INIT = 1,
     DTW_Q_LOAD = 2,
-    DTW_RUN    = 3,
-    DTW_DONE   = 4;
+    DTW_RUN    = 3;
 
 /* ===============================
  * registers/wires
@@ -181,10 +174,6 @@ always @(posedge clk) begin
                 r_state <= DTW_RUN;
         end
         DTW_RUN: begin
-            if (dp_done)
-                r_state <= DTW_DONE;
-        end
-        DTW_DONE: begin
         end
         default: r_state <= IDLE;
         endcase
@@ -197,7 +186,6 @@ always @(posedge clk) begin
     IDLE: begin
         busy                    <= 0;
         src_fifo_rden           <= 0;
-        sink_fifo_wren          <= 0;
         addr_ref                <= 0;
         dp_rst                  <= 1;
         dp_running              <= 0;
@@ -205,14 +193,12 @@ always @(posedge clk) begin
         dp_load                 <= 0;
         stall_counter           <= 0;
         r_src_fifo_clear        <= 1;
-        sink_fifo_last          <= 0;
         curr_qid                <= 0;
         counter                 <= 1;
     end
     DTW_Q_INIT: begin
         busy                    <= 1;
         src_fifo_rden           <= 1;
-        sink_fifo_wren          <= 0;
         dp_rst                  <= 0;
         stall_counter           <= 0;
         r_src_fifo_clear        <= 0;
@@ -220,7 +206,6 @@ always @(posedge clk) begin
     end
     DTW_Q_LOAD: begin
         busy                    <= 1;
-        sink_fifo_wren          <= 0;
         dp_rst                  <= 0;
         stall_counter           <= 0;
         r_src_fifo_clear        <= 0;
@@ -235,7 +220,6 @@ always @(posedge clk) begin
     end
     DTW_RUN: begin
         busy                    <= 1;
-        sink_fifo_wren          <= 0;
         dp_rst                  <= 0;
         stall_counter           <= 0;
         r_src_fifo_clear        <= 0;
@@ -254,46 +238,14 @@ always @(posedge clk) begin
         end
 
     end
-    DTW_DONE: begin
-        busy                    <= 1;
-        src_fifo_rden           <= 0;
-        dp_rst                  <= 0;
-        dp_running              <= 0;
-
-        // Serialize output
-        if (!sink_fifo_full) begin
-            stall_counter       <= stall_counter + 1;
-
-            if (stall_counter == 0) begin
-                sink_fifo_last  <= 0;
-                sink_fifo_wren  <= 1;
-                sink_fifo_data  <= curr_qid;
-            end else if (stall_counter == 1) begin
-                sink_fifo_last  <= 0;
-                sink_fifo_wren  <= 1;
-                sink_fifo_data  <= curr_idx;
-            end else if (stall_counter == 2) begin
-                sink_fifo_last  <= 0;
-                sink_fifo_wren  <= 1;
-                sink_fifo_data  <= {16'b0, curr_score};
-            end else begin
-                sink_fifo_last  <= 1;
-                sink_fifo_wren  <= 0;
-                sink_fifo_data  <= 0;
-                r_dbg_nquery    <= r_dbg_nquery + 1;
-            end
-        end 
-    end
     default: begin
         busy                    <= 0;
         src_fifo_rden           <= 0;
-        sink_fifo_wren          <= 0;
         addr_ref                <= 0;
         dp_rst                  <= 1;
         dp_running              <= 0;
         stall_counter           <= 0;
         r_src_fifo_clear        <= 1;
-        sink_fifo_last          <= 0;
     end
     endcase
 end

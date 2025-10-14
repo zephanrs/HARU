@@ -194,6 +194,20 @@ wire                            w_sink_fifo_r_stb;
 wire                            w_sink_fifo_empty;
 wire                            w_sink_fifo_not_empty;
 
+// --- Tie-offs for removed sink path ---
+
+// AXIS sink interface (we don't produce anything)
+assign SINK_AXIS_tuser  = 1'b0;
+assign SINK_AXIS_tvalid = 1'b0;
+assign SINK_AXIS_tlast  = 1'b0;
+assign SINK_AXIS_tdata  = {AXIS_DATA_WIDTH{1'b0}};
+
+assign w_sink_fifo_empty = 1'b1; // nothing to drain → "empty"
+assign w_sink_fifo_full  = 1'b0; // and definitely not "full"
+
+// If you expose w_dbg_ref_dout but no longer drive it anywhere, tie it off too
+assign w_dbg_ref_dout    = {DATA_WIDTH{1'b0}};
+
 // dtw core debug
 wire  [2:0]                     w_dtw_core_state;
 wire  [REFMEM_PTR_WIDTH-1:0]   w_dtw_core_addr_ref;
@@ -312,11 +326,6 @@ dtw_core #(
     .src_fifo_empty     (w_src_fifo_empty),
     .src_fifo_data      (w_src_fifo_r_data),
 
-    .sink_fifo_wren     (w_sink_fifo_w_stb),
-    .sink_fifo_full     (w_sink_fifo_full),
-    .sink_fifo_data     (w_sink_fifo_w_data),
-    .sink_fifo_last     (w_sink_fifo_r_last),
-
     .dbg_state          (w_dtw_core_state),
     .dbg_addr_ref       (w_dtw_core_addr_ref),
 
@@ -328,40 +337,6 @@ dtw_core #(
     .curr_count         (w_dtw_core_count),
     .curr_idx           (w_dtw_core_idx),
     .curr_score         (w_dtw_core_score)
-);
-
-fifo #(
-    .DEPTH              (FIFO_DEPTH),
-    .WIDTH              (FIFO_DATA_WIDTH)
-) sink_fifo (
-    .clk                (SRC_AXIS_clk),
-    .rst                (w_axis_rst),
-
-    .i_fifo_w_stb       (w_sink_fifo_w_stb),
-    .i_fifo_w_data      (w_sink_fifo_w_data),
-    .o_fifo_full        (w_sink_fifo_full),
-    .o_fifo_not_full    (w_sink_fifo_not_full),
-
-    .i_fifo_r_stb       (w_sink_fifo_r_stb),
-    .o_fifo_r_data      (w_sink_fifo_r_data),
-    .o_fifo_empty       (w_sink_fifo_empty),
-    .o_fifo_not_empty   (w_sink_fifo_not_empty)
-);
-
-// sink FIFO -> AXIS sink
-fifo_2_axis_adapter #(
-    .AXIS_DATA_WIDTH    (AXIS_DATA_WIDTH)
-)f2aa(
-    .o_fifo_r_stb       (w_sink_fifo_r_stb),
-    .i_fifo_data        (w_sink_fifo_r_data),
-    .i_fifo_not_empty   (w_sink_fifo_not_empty),
-    .i_fifo_last        (w_sink_fifo_r_last),
-
-    .o_axis_tuser       (SINK_AXIS_tuser),
-    .o_axis_tdata       (SINK_AXIS_tdata),
-    .o_axis_tvalid      (SINK_AXIS_tvalid),
-    .i_axis_tready      (SINK_AXIS_tready),
-    .o_axis_tlast       (SINK_AXIS_tlast)
 );
 
 /* ===============================
