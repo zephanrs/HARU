@@ -16,7 +16,6 @@
  *  o_fifo_r_data: Data output, witdh controlled with WIDTH parameter.
  *  o_fifo_full: 1bit signal, indicate when the FIFO is full.
  *  o_fifo_empty: 1bit signal, indicate when the FIFO is empty.
- *  o_fifo_not_empty: 1bit signal, indicate when the FIFO is not empty.
  *  o_fifo_not_full: 1bit signal, indicate when the FIFO is not full.
  *
  * Changed:
@@ -46,8 +45,7 @@ module fifo #(
 
     input  wire                 i_fifo_r_stb,
     output wire [WIDTH-1:0]     o_fifo_r_data,
-    output wire                 o_fifo_empty,
-    output wire                 o_fifo_not_empty
+    output wire                 o_fifo_empty
 );
 
 /* ===============================
@@ -66,7 +64,6 @@ reg [$clog2(DEPTH)-1:0] r_read_ptr;
  * =============================== */
 assign o_fifo_empty     = (write_ptr == read_ptr);
 assign o_fifo_full      = (write_ptr == r_read_ptr);
-assign o_fifo_not_empty = ~o_fifo_empty;
 assign o_fifo_not_full  = ~o_fifo_full;
 assign o_fifo_r_data    = MEM[read_ptr];
 
@@ -100,9 +97,6 @@ always @ (posedge clk) begin
     end
 end
 
-logic w_test;
-assign w_test = i_fifo_r_stb && o_fifo_not_empty;
-
 always @ ( posedge clk ) begin
     if (rst) begin
         write_ptr       <=  0;
@@ -115,8 +109,7 @@ always @ ( posedge clk ) begin
         end
 
         // Read pointer
-        // if (i_fifo_r_stb && o_fifo_not_empty) begin
-        if (w_test) begin
+        if (i_fifo_r_stb && !o_fifo_empty) begin
             r_read_ptr  <= read_ptr;
             read_ptr    <= read_ptr + 1;
         end

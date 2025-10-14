@@ -38,8 +38,7 @@ SOFTWARE.
 
 module axi_lite_slave #(
     parameter ADDR_WIDTH    = 16,
-    parameter DATA_WIDTH    = 32,
-    parameter STROBE_WIDTH  = (DATA_WIDTH / 8)
+    parameter DATA_WIDTH    = 32
 )(
     input   wire                        clk,
     input   wire                        rst,
@@ -96,7 +95,7 @@ localparam SEND_READ_DATA      = 4'h5;
 /* ===============================
  * registes/wires
  * =============================== */
-reg   [3:0]                           state = IDLE;
+reg   [3:0]  state;
 
 /* ===============================
  * synchronous logic

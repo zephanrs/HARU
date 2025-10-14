@@ -39,8 +39,6 @@ module dtw_accel #(
     parameter DATA_WIDTH            = 32,
 
     parameter AXIS_DATA_WIDTH       = 32,
-    parameter AXIS_KEEP_WIDTH       = (AXIS_DATA_WIDTH / 8),
-    parameter AXIS_DATA_USER_WIDTH  = 0,
     parameter FIFO_DATA_WIDTH       = AXIS_DATA_WIDTH,
     parameter FIFO_DEPTH            = 4,
     parameter INVERT_AXI_RESET      = 1,
@@ -104,10 +102,6 @@ localparam  REG_SCORE        = 8;
 localparam  integer ADDR_LSB = (DATA_WIDTH / 32) + 1;
 localparam  integer ADDR_BITS = 3;
 
-localparam  MAX_ADDR = REG_KEY;
-
-localparam REFMEM_PTR_WIDTH = 18;
-
 /* ===============================
  * registers/wires
  * =============================== */
@@ -131,7 +125,6 @@ wire  [DATA_WIDTH - 1 : 0]      w_status;
 wire  [DATA_WIDTH - 1 : 0]      w_version;
 wire  [DATA_WIDTH - 1 : 0]      w_key;
 reg   [DATA_WIDTH - 1 : 0]      r_dbg_ref_din;
-wire  [DATA_WIDTH - 1 : 0]      w_dbg_ref_dout;
 
 // new DTW accel
 wire  [31:0]                    w_dtw_core_qid;
@@ -142,8 +135,6 @@ wire  [DATA_WIDTH - 1 : 0]      w_dtw_core_score;
 
 // Control Register bits
 wire                            w_dtw_core_rst;
-wire                            w_dtw_core_rs;
-wire                            w_dtw_core_mode;
 
 // Status Register bits
 wire                            w_dtw_core_busy;
@@ -159,7 +150,6 @@ wire                            w_src_fifo_not_full;
 wire  [FIFO_DATA_WIDTH - 1:0]   w_src_fifo_r_data;
 wire                            w_src_fifo_r_stb;
 wire                            w_src_fifo_empty;
-wire                            w_src_fifo_not_empty;
 
 // dtw core debug
 wire  [1:0]                     w_dtw_core_state;
@@ -250,8 +240,7 @@ fifo #(
 
     .i_fifo_r_stb       (w_src_fifo_r_stb),
     .o_fifo_r_data      (w_src_fifo_r_data),
-    .o_fifo_empty       (w_src_fifo_empty),
-    .o_fifo_not_empty   (w_src_fifo_not_empty)
+    .o_fifo_empty       (w_src_fifo_empty)
 );
 
 // DTW core
