@@ -72,6 +72,9 @@ module dtw_core #(
 /* ===============================
  * local parameters
  * =============================== */
+// Squiggle size
+localparam swidth = $clog2(SQG_SIZE);
+
 // Operation mode
 localparam
     MODE_NORMAL = 1'b0,
@@ -93,7 +96,9 @@ reg r_src_fifo_clear;
 // Ref mem signals
 reg  [REFMEM_PTR_WIDTH-1:0] addr_ref;          // Read address for refmem 
 
-reg  [8:0]          load_count;
+// counter
+reg  [swidth:0]     counter;
+reg                 done;
 
 // DTW datapath signals
 reg                 dp_rst;             // dp core reset
@@ -140,7 +145,8 @@ dtw_core_datapath #(
 /* ===============================
  * asynchronous logic
  * =============================== */
-assign load_done = load_count[8];
+assign done = (counter == SQG_SIZE); // counter[swidth]
+assign load_done = done; 
 assign src_fifo_clear = r_src_fifo_clear;
 assign dbg_state = r_state;
 assign dbg_addr_ref = addr_ref;
@@ -157,43 +163,24 @@ always @(posedge clk) begin
     end else begin
         case (r_state)
         IDLE: begin
-            if (rs) begin
-                if (op_mode == MODE_LOAD_QUERY && dp_load_done == 0) begin
-                    r_state <= DTW_Q_INIT;
-                end else begin
-                    r_state <= IDLE;
-                end
-            end else begin
-                r_state <= IDLE;
-            end
+            if (rs && op_mode == MODE_LOAD_QUERY && dp_load_done == 0)
+                r_state <= DTW_Q_INIT;
         end
         DTW_Q_INIT: begin
-            if (!src_fifo_empty) begin
+            if (!src_fifo_empty)
                 r_state <= DTW_Q_LOAD;
-            end else begin
-                r_state <= DTW_Q_INIT;
-            end
         end
         DTW_Q_LOAD: begin
-            if (!load_done || src_fifo_empty) begin
-                r_state <= DTW_Q_LOAD;
-            end else begin
+            if (done && !src_fifo_empty)
                 r_state <= DTW_RUN;
-            end
         end
         DTW_RUN: begin
-            if (!dp_done) begin
-                r_state <= DTW_RUN;
-            end else begin
+            if (dp_done)
                 r_state <= DTW_DONE;
-            end
         end
-        DTW_DONE: begin
-            if (sink_fifo_full || stall_counter < 2'h3) begin
-                r_state <= DTW_DONE;
-            end else begin
+        DTW_DONE:
+            if (!sink_fifo_full && stall_counter >= 2'h3) begin
                 r_state <= IDLE;
-            end
         end
         default: r_state <= IDLE;
         endcase
@@ -215,7 +202,7 @@ always @(posedge clk) begin
         r_src_fifo_clear        <= 1;
         sink_fifo_last          <= 0;
         curr_qid                <= 0;
-        load_count              <= 1;
+        counter                 <= 1;
     end
     DTW_Q_INIT: begin
         busy                    <= 1;
@@ -224,10 +211,7 @@ always @(posedge clk) begin
         dp_rst                  <= 0;
         stall_counter           <= 0;
         r_src_fifo_clear        <= 0;
-
-        if (!src_fifo_empty) begin
-            curr_qid            <= src_fifo_data;
-        end
+        curr_qid                <= src_fifo_data;
     end
     DTW_Q_LOAD: begin
         busy                    <= 1;
@@ -238,20 +222,11 @@ always @(posedge clk) begin
         dp_running              <= 0;
         addr_ref                <= 0;
         src_fifo_rden           <= 1;
-        dp_load                 <= 1;
 
+        dp_load                 <= !src_fifo_empty;
 
-        if (!load_done) begin
-            if (!src_fifo_empty) begin
-                load_count          <= load_count + 1;
-            end else begin
-                dp_load             <= 0;
-            end
-        end else begin
-            if (src_fifo_empty) begin
-                dp_load             <= 0;
-            end
-        end
+        if (!src_fifo_empty)
+            counter             <= done ? 1 : counter + 1;
     end
     DTW_RUN: begin
         busy                    <= 1;
@@ -262,17 +237,12 @@ always @(posedge clk) begin
         dp_load                 <= 0;
         src_fifo_rden           <= 1;
 
-        if (!src_fifo_empty) begin
-            dp_running          <= 1;
-        end else begin // stall core if empty
-            dp_running          <= 0;
-        end
+        dp_running              <= !src_fifo_empty;
+        src_fifo_rden           <= !done;
 
-        if (addr_ref < REFMEM_PTR_WIDTH'(ref_len) - 1) begin // loading ref
+        if (!done) begin // loading ref
             if (!src_fifo_empty)
-                addr_ref        <= addr_ref + 1;
-        end else begin
-            src_fifo_rden       <= 0;
+                counter         <= counter + 1;
         end
 
     end
