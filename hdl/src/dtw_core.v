@@ -175,7 +175,7 @@ always @(posedge clk) begin
             end
         end
         DTW_Q_LOAD: begin
-            if (!load_done) begin
+            if (!load_done || src_fifo_empty) begin
                 r_state <= DTW_Q_LOAD;
             end else begin
                 r_state <= DTW_RUN;
@@ -245,6 +245,10 @@ always @(posedge clk) begin
             if (!src_fifo_empty) begin
                 load_count          <= load_count + 1;
             end else begin
+                dp_load             <= 0;
+            end
+        end else begin
+            if (src_fifo_empty) begin
                 dp_load             <= 0;
             end
         end
