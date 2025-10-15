@@ -67,7 +67,7 @@ module dtw_core #(
 
 // squiggle size
 localparam swidth                   = $clog2(SQG_SIZE);
-localparam [swidth-1:0] counter_end = SQG_SIZE - 1;
+localparam [swidth:0] counter_end   = SQG_SIZE - 1;
 
 // fsm states
 localparam [1:0]
@@ -114,7 +114,7 @@ dtw_core_datapath #(
  * asynchronous logic
  * =============================== */
 
-assign done = (counter == counter_end);
+assign done = (counter == counter_end[swidth-1:0]);
 assign load_done = (curr_state == DTW_RUN); 
 assign curr_score[31:16] = 0;
 
