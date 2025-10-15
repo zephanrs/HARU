@@ -81,7 +81,7 @@ localparam [1:0]
 
 // counter
 reg  [swidth-1:0]   counter;
-reg                 done;
+wire                done;
 
 // dtw datapath signals
 reg                 dp_running;         // dp core run enable
