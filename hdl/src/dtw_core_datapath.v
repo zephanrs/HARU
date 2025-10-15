@@ -123,23 +123,17 @@ assign nw = (!last_d[0] && last_d[1]) ? 0 : -1;
 // shift PE running status
 always @(posedge clk) begin
     if(rst) begin
-        for (k = 0; k < SQG_SIZE; k = k + 1) begin
-            running_d[k] <= 0;
-        end
+        running_d <= '0;
     end else begin
         running_d[0] <= running;
-        for (k = 1; k < SQG_SIZE; k = k + 1) begin
-            running_d[k] <= running_d[k-1];
-        end
+        running_d[SQG_SIZE-1:1] <= running_d[SQG_SIZE-2:0];
     end
 end
 
 // shift PE last status
 always @(posedge clk) begin
     if(rst) begin
-        for (k = 0; k < SQG_SIZE; k = k + 1) begin
-            last_d[k] <= 1;
-        end
+        last_d <= '1;
     end else begin
         if (running)
             last_d[0] <= last;
