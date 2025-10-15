@@ -9,8 +9,6 @@ from test_helpers import *
 import random
 import numpy as np
 
-SQG_SIZE = 256
-
 def dtw(reference, query):
   r = np.asarray(reference, dtype=np.uint16)
   q = np.asarray(query,     dtype=np.uint16)
@@ -39,13 +37,6 @@ async def setup(dut):
   await reset_core(axil, dut)
   return axil, axis_in
 
-async def load_query(dut, axil, axis_in, qid, samples):
-  await reset_core(axil, dut)
-  await axis_in.send(AxiStreamFrame(pack_words([qid] + samples)))
-
-async def load_reference(dut, axil, axis_in, ref_words):
-  await axis_in.send(AxiStreamFrame(pack_words(ref_words)))
-
 async def read_status_regs(axil, expected_count=1, timeout_ns=400_000):
   async def wait_for_reg_count():
     while True:
@@ -62,28 +53,6 @@ async def read_status_regs(axil, expected_count=1, timeout_ns=400_000):
   idx     = int.from_bytes(idx_bytes.data,   "little")
   score   = int.from_bytes(score_bytes.data, "little") & 0xFFFF
   return got_qid, idx, score
-
-def generate_random_reference(rng, query, ref_len=256):
-  mu = float(SQG_SIZE) / float(ref_len)
-  p1 = 0.5
-  p2 = max(0.0, min(0.5, (mu - 0.5) / 2.0))
-  p0 = 0.5 - p2
-
-  ref = []
-  r = 0
-  for _ in range(ref_len):
-    x = query[r]
-    p = rng.random()
-    if p < p2:
-      r = min(r + 2, SQG_SIZE - 1)
-    elif p < (p2 + p1):
-      r = min(r + 1, SQG_SIZE - 1)
-    y = x + rng.randint(-4, 4)
-    if y < 0:
-      y = 0
-    ref.append(y & 0xFFFF)
-
-  return ref
 
 @cocotb.test()
 async def test_align_identity(dut):

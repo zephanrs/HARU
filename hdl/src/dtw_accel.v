@@ -97,7 +97,8 @@ localparam  REG_REF_DIN      = 4;
 localparam  REG_QID          = 5;
 localparam  REG_COUNT        = 6;
 localparam  REG_IDX          = 7;
-localparam  REG_SCORE        = 8;     
+localparam  REG_POS          = 8;
+localparam  REG_SCORE        = 9;     
 
 localparam  integer ADDR_LSB = (DATA_WIDTH / 32) + 1;
 localparam  integer ADDR_BITS = 3;
@@ -130,11 +131,13 @@ reg   [DATA_WIDTH - 1 : 0]      r_dbg_ref_din;
 wire  [31:0]                    w_dtw_core_qid;
 wire  [31:0]                    w_dtw_core_count;
 wire  [31:0]                    w_dtw_core_idx;
+wire  [31:0]                    w_dtw_core_pos;
 wire  [DATA_WIDTH - 1 : 0]      w_dtw_core_score;
 
 
 // Control Register bits
 wire                            w_dtw_core_rst;
+wire                            w_dtw_core_sdtw;
 
 // Status Register bits
 wire                            w_dtw_core_busy;
@@ -218,6 +221,8 @@ dtw_core #(
     .clk                (S_AXI_clk),
     .rst                (w_dtw_core_rst),
 
+    .sdtw               (w_dtw_core_sdtw),
+
     .busy               (w_dtw_core_busy),
     .load_done          (w_dtw_core_load_done),
 
@@ -231,6 +236,7 @@ dtw_core #(
     .curr_qid           (w_dtw_core_qid),
     .curr_count         (w_dtw_core_count),
     .curr_idx           (w_dtw_core_idx),
+    .curr_pos           (w_dtw_core_pos),
     .curr_score         (w_dtw_core_score)
 );
 
@@ -247,6 +253,7 @@ assign w_version[`VERSION_PAD_RANGE]    = 0;
 assign w_key                            = 32'h0ca7cafe;
 
 assign w_dtw_core_rst                   = r_control[0];
+assign w_dtw_core_sdtw                  = r_control[1];
 
 assign w_status[0]                      = w_dtw_core_busy;
 assign w_status[1]                      = w_dtw_core_load_done;
@@ -289,6 +296,8 @@ always @ (posedge S_AXI_clk) begin
             end
             REG_IDX: begin
             end
+            REG_POS: begin
+            end
             REG_SCORE: begin
             end
             default: begin // unknown address
@@ -323,6 +332,9 @@ always @ (posedge S_AXI_clk) begin
             end
             REG_IDX: begin
                 r_reg_out_data <= w_dtw_core_idx;
+            end
+            REG_POS: begin
+                r_reg_out_data <= w_dtw_core_pos;
             end
             REG_SCORE: begin
                 r_reg_out_data <= w_dtw_core_score;

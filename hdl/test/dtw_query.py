@@ -8,8 +8,6 @@ from cocotbext.axi import (
 from test_helpers import *
 import random
 
-SQG_SIZE = 256
-
 def get_dp(dut):
   return dut.dut.dc.inst_dtw_core_datapath
 

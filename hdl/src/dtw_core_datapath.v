@@ -39,7 +39,10 @@ module dtw_core_datapath #(
 
     output  reg  [width-1:0]    minval,         // Minimum value
     output  reg  [31:0]         minidx,         // Position of minimum value
-    output  reg  [31:0]         ref_count       // # References procesed
+    output  reg  [31:0]         minpos,
+    output  reg  [31:0]         ref_count,      // # References procesed
+
+    input   wire                sdtw
 );
 
 /* ===============================
@@ -58,6 +61,7 @@ reg     [width-1:0]     stream_in_buff [0:1];
 
 // PE wires
 wire    [width-1:0]     nw; // NW value of PE0
+wire    [width-1:0]     n;  // NW value of PE0
 wire    [width-1:0]     DTW_curr        [0:SQG_SIZE-1];
 wire    [width-1:0]     p_Rword         [0:SQG_SIZE-1];
 
@@ -67,6 +71,9 @@ reg     [width-1:0]     DTW_pprev       [0:SQG_SIZE-1];
 // PE status signals
 reg     [SQG_SIZE-1:0]  running_d;
 reg     [SQG_SIZE-1:0]  last_d;
+
+// sDTW signal
+reg     [31:0]          cycle_counter;
 
 /* ===============================
  * submodules
@@ -82,7 +89,7 @@ dtw_core_pe #(
     .x       (s_buff[0]),
     .y       (stream_in_buff[1]),
     .W       (DTW_prev[0]),
-    .N       (-1),
+    .N       (n),
     .NW      (nw),
     .DTWc    (DTW_curr[0]),
     .yp      (p_Rword[0])
@@ -115,6 +122,7 @@ endgenerate
 
 assign s_load_done  = s_addr[8];
 assign nw = (!last_d[0] && last_d[1]) ? 0 : -1;
+assign n  = sdtw ? 0 : -1;
 
 /* ===============================
  * synchronous logic
@@ -196,19 +204,37 @@ always @(posedge clk) begin
     end
 end
 
+// cycle counter (sdtw)
+always @(posedge clk) begin
+    if (rst || last_d[SQG_SIZE-1]) begin
+        cycle_counter <= 0;
+    end else if (running_d[SQG_SIZE-1]) begin
+        cycle_counter <= cycle_counter + 1;
+    end
+end
+
 // min score and reference index update
 always @(posedge clk) begin
     if (rst) begin
         minval    <= -1;
         minidx    <= 0;
+        minpos    <= 0;
         ref_count <= 0;
+    end else if (sdtw) begin
+        if (running_d[SQG_SIZE-1] && (DTW_curr[SQG_SIZE-1] < minval)) begin
+            minval <= DTW_curr[SQG_SIZE-1];
+            minidx <= ref_count;
+            minpos <= cycle_counter;
+        end
     end else if (last_d[SQG_SIZE-1] && running_d[SQG_SIZE-1]) begin
         if (DTW_curr[SQG_SIZE-1] < minval) begin
             minval <= DTW_curr[SQG_SIZE-1];
             minidx <= ref_count;
-        end
-        ref_count <= ref_count + 1;
+        end 
     end
+
+    if (last_d[SQG_SIZE-1] && running_d[SQG_SIZE-1])
+        ref_count <= ref_count + 1;
 end
 
 endmodule

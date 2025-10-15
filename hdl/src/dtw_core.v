@@ -40,11 +40,14 @@ module dtw_core #(
     input   wire                    clk,
     input   wire                    rst,
 
+    input   wire                    sdtw,
+
+    // status signals
     output  reg                     busy,               // Idle: 0, busy: 1
     output  wire                    load_done,
     output  reg  [1:0]              curr_state,
 
-    // src fifo signals
+    // src axi-stream
     input   wire                    src_axis_tvalid,
     output  reg                     src_axis_tready,
     input   wire                    src_axis_tlast,
@@ -54,6 +57,7 @@ module dtw_core #(
     output  reg  [31:0]             curr_qid,
     output  wire [31:0]             curr_count,
     output  wire [31:0]             curr_idx,
+    output  wire [31:0]             curr_pos,
     output  wire [31:0]             curr_score
 );
 
@@ -100,7 +104,9 @@ dtw_core_datapath #(
     .stream_in      (src_axis_tdata[15:0]),
     .minval         (curr_score[15:0]),
     .minidx         (curr_idx),
-    .ref_count      (curr_count)
+    .minpos         (curr_pos),
+    .ref_count      (curr_count),
+    .sdtw           (sdtw)
 );
 
 /* ===============================
