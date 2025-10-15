@@ -66,7 +66,8 @@ module dtw_core #(
  * =============================== */
 
 // squiggle size
-localparam swidth = $clog2(SQG_SIZE);
+localparam swidth                   = $clog2(SQG_SIZE);
+localparam [swidth-1:0] counter_end = SQG_SIZE - 1;
 
 // fsm states
 localparam [1:0]
@@ -113,7 +114,7 @@ dtw_core_datapath #(
  * asynchronous logic
  * =============================== */
 
-assign done = (counter == 255); // swidth'(SQG_SIZE-1) isn't synthesizable
+assign done = (counter == counter_end);
 assign load_done = (curr_state == DTW_RUN); 
 assign curr_score[31:16] = 0;
 

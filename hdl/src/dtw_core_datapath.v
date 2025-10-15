@@ -131,7 +131,7 @@ assign n  = sdtw ? 0 : -1;
 // shift PE running status
 always @(posedge clk) begin
     if(rst) begin
-        running_d <= {SQG_SIZE{1'b0}};
+        running_d <= 0;//{SQG_SIZE{1'b0}};
     end else begin
         running_d[0] <= running;
         running_d[SQG_SIZE-1:1] <= running_d[SQG_SIZE-2:0];
@@ -141,7 +141,7 @@ end
 // shift PE last status
 always @(posedge clk) begin
     if(rst) begin
-        last_d <= {SQG_SIZE{1'b1}};
+        last_d <= -1;
     end else begin
         if (running)
             last_d[0] <= last;
