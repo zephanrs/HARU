@@ -113,7 +113,7 @@ dtw_core_datapath #(
  * asynchronous logic
  * =============================== */
 
-assign done = (counter == swidth'(SQG_SIZE - 1));
+assign done = (counter == 255); // swidth'(SQG_SIZE-1) isn't synthesizable
 assign load_done = (curr_state == DTW_RUN); 
 assign curr_score[31:16] = 0;
 
