@@ -87,19 +87,15 @@ int32_t axi_dma_init(axi_dma_t *device, uint32_t baseaddr, uint32_t size) {
     }
 
     // Split CMA buffer into src/dst slices (4KiB-aligned)
-    size_t off_dst = (device->cma_size / 2) & ~0xFFF;   // 4KiB-align
     device->v_src_addr = (uint8_t*)device->cma_cpu + 0;
-    device->v_dst_addr = (uint8_t*)device->cma_cpu + off_dst;
     device->p_src_addr = device->cma_phys + 0;
-    device->p_dst_addr = device->cma_phys + off_dst;
 
     fprintf(stderr, "CMA buffer: phys=0x%lx size=%lu bytes\n", 
            (unsigned long)device->cma_phys, (unsigned long)device->cma_size);
     fprintf(stderr, "SRC: virt=%p phys=0x%lx\n", device->v_src_addr, (unsigned long)device->p_src_addr);
-    fprintf(stderr, "DST: virt=%p phys=0x%lx\n", device->v_dst_addr, (unsigned long)device->p_dst_addr);
 
     // Check and reset DMA controller
-    if (dma_mm2s_sg_active(device) || dma_s2mm_sg_active(device)) {
+    if (dma_mm2s_sg_active(device)) {
         fprintf(stderr, "Error: DMA scatter/gather mode active\n");
         munmap(device->cma_cpu, device->cma_size);
         close(device->haru_dma_fd);
@@ -108,7 +104,6 @@ int32_t axi_dma_init(axi_dma_t *device, uint32_t baseaddr, uint32_t size) {
     }
     
     dma_mm2s_reset(device);
-    dma_s2mm_reset(device);
 
     return 0;
 }
@@ -140,8 +135,6 @@ void axi_dma_mm2s_transfer(axi_dma_t *device, uint32_t size) {
     
     // Wait for completion
     dma_mm2s_busy_wait(device);
-    // printf("mm2s transferred %d bytes\n", size);
-    // HARU_INFO("mm2s transfer done\n");
 }
 
 void axi_dma_s2mm_transfer(axi_dma_t *device, uint32_t size) {

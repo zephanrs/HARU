@@ -29,10 +29,6 @@ SOFTWARE. */
 #include "haru.h"
 #include "haru_test.h"
 
-#define REFERENCE_SIZE 10000
-#define QUERY_SIZE 256
-#define QUERY_LOCATION 500
-
 int main(int argc, char *argv[]) {
     int32_t ret;
     
@@ -43,29 +39,43 @@ int main(int argc, char *argv[]) {
         return -1;
     }
 
-    int32_t ref[REFERENCE_SIZE];
-    int32_t query[QUERY_SIZE + 2];
+    int32_t ref[512];
+    int32_t query[256];
     search_result_t results;
 
     memset(ref, 0, sizeof(ref));
     memset(query, 0, sizeof(query));
 
-    for (int i = 0; i < REFERENCE_SIZE; i++) {
+    for (int i = 0; i < 512; i++) {
         ref[i] = rand() % 100;
     }
 
-    for (int i = 2; i < QUERY_SIZE + 2; i++) {
-        query[i] = ref[QUERY_LOCATION + i];
+    for (int i = 0; i < 256; i++) {
+        query[i] = ref[i+128];
     }
 
-    printf("load reference\n");
-    if (haru_load_reference(&haru, ref, REFERENCE_SIZE)) {
-        printf("Load done: %x\n", dtw_accel_ref_load_done(&haru.dtw_accel));
-        haru_process_query(&haru, query, QUERY_SIZE+2, &results);
-        printf("results:\n\tqid:%d\n\tposition: %d\n\tscore: %d\n", results.qid, results.position, results.score);
-    } else {
-        printf("Load not done\n");
-    }
+    printf("\nDTW MODE:\n");
+    haru_set_dtw(&haru);
+    haru_load_query(&haru, 7,     query,   256);
+    haru_process_reference(&haru, ref,     256);
+    haru_process_reference(&haru, ref+256, 256);
+    haru_get_results(&haru, 2, &results);
+
+    printf("qid:      %u\n", results.qid);
+    printf("idx:      %u\n", results.idx);
+    printf("position: %u\n", results.position);
+    printf("score:    %u\n", results.score);
+
+    printf("\nsDTW MODE:\n");
+    haru_set_sdtw(&haru);
+    haru_load_query(&haru, 7,     query,   256);
+    haru_process_reference(&haru, ref,     512);
+    haru_get_results(&haru, 1, &results);
+
+    printf("qid:      %u\n", results.qid);
+    printf("idx:      %u\n", results.idx);
+    printf("position: %u\n", results.position);
+    printf("score:    %u\n", results.score);
 
     haru_release(&haru);
     return 0;

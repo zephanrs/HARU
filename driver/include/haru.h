@@ -50,6 +50,7 @@ typedef struct {
 
 typedef struct {
     uint32_t qid;
+    uint32_t idx;
     uint32_t position;
     uint32_t score;
 } search_result_t;
@@ -58,9 +59,13 @@ int32_t haru_init(haru_t *haru);
 void haru_release(haru_t *haru);
 void haru_check_key(haru_t *haru);
 uint32_t haru_get_version(haru_t *haru);
-void haru_get_load_done(haru_t *haru);
 
-int32_t haru_load_reference(haru_t *haru, int32_t *ref, uint32_t size);
-void haru_process_query(haru_t *haru, int32_t *query, uint32_t size, search_result_t *results);
+void haru_set_dtw(haru_t *haru);
+void haru_set_sdtw(haru_t *haru);
+
+void haru_get_results(haru_t *haru, uint32_t count, search_result_t *results);
+
+void haru_process_reference(haru_t *haru, int32_t *ref, uint32_t size);
+void haru_load_query(haru_t *haru, int32_t qid, int32_t *query, uint32_t size);
 
 #endif // HARU_H
