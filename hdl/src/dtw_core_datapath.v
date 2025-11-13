@@ -49,7 +49,7 @@ module dtw_core_datapath #(
 integer k;
 
 // squiggle buffer
-reg     [8:0]           s_addr;
+reg     [$clog2(SQG_SIZE):0]    s_addr;
 wire                    s_load_done;
 reg     [width-1:0]     s_buff          [0:SQG_SIZE-1];
 
@@ -113,7 +113,7 @@ endgenerate
  * asynchronous logic
  * =============================== */
 
-assign s_load_done  = s_addr[8];
+assign s_load_done  = s_addr[$clog2(SQG_SIZE)];
 assign nw = (!last_d[0] && last_d[1]) ? 0 : -1;
 
 /* ===============================
@@ -175,7 +175,7 @@ always @(posedge clk) begin
         end
     end else if (load) begin
         if (!s_load_done) begin
-            s_buff[s_addr[7:0]] <= stream_in_buff[0];
+            s_buff[s_addr[$clog2(SQG_SIZE)-1:0]] <= stream_in_buff[0];
         end
     end
 end
