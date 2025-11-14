@@ -9,7 +9,7 @@ from test_helpers import *
 import random
 import numpy as np
 
-SQG_SIZE = 256
+SQG_SIZE = 16
 
 def dtw(reference, query):
   r = np.asarray(reference, dtype=np.uint16)

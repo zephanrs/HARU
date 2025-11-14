@@ -27,7 +27,7 @@ SOFTWARE. */
 
 module dtw_core_datapath #(
     parameter width     = 16,
-    parameter SQG_SIZE  = 256
+    parameter SQG_SIZE  = 16
 )(
     input   wire                clk,
     input   wire                rst,

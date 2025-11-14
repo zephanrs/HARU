@@ -34,7 +34,7 @@ SOFTWARE.
 module dtw_core #(
     parameter WIDTH         = 16,   // data width
     parameter AXIS_WIDTH    = 32,   // axi data width
-    parameter SQG_SIZE      = 256   // squiggle size
+    parameter SQG_SIZE      = 16    // squiggle size
 )(
     // main dtw signals
     input   wire                    clk,

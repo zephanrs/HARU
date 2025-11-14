@@ -8,7 +8,7 @@ from cocotbext.axi import (
 from test_helpers import *
 import random
 
-SQG_SIZE = 256
+SQG_SIZE = 16
 
 async def wait_cycles(clk, n):
   for _ in range(n):
